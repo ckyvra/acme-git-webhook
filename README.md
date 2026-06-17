@@ -1,6 +1,7 @@
 # acme-git-webhook
 
 [![ci](https://github.com/ckyvra/acme-git-webhook/actions/workflows/ci.yml/badge.svg)](https://github.com/ckyvra/acme-git-webhook/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/ckyvra/acme-git-webhook/branch/main/graph/badge.svg)](https://codecov.io/gh/ckyvra/acme-git-webhook)
 
 FastAPI webhook that provisions ACME DNS-01 challenges by adding/removing
 TXT records in Bind zone files stored in a Git repository.

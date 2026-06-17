@@ -19,7 +19,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -r dev-requirements.txt
-      - run: pytest -v
+      - run: pytest --cov=app --cov-report=xml -v
+      - uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
 
   lint:
     runs-on: ubuntu-latest
