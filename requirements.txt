@@ -6,4 +6,4 @@ gitpython==3.1.50
 fasteners==0.20
 pydantic==2.13.4
 hvac==2.4.0
-cryptography==44.0.3
+cryptography==48.0.1
