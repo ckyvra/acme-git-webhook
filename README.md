@@ -70,13 +70,13 @@ as a Docker secret at the path specified by `secret_id_path`.
 
 ## API
 
-| Endpoint | Method | Auth | Body | Description |
-|---|---|---|---|---|---|
-| `/health` | GET | No | — | Healthcheck |
-| `/acme/auth` | POST | Bearer | `{ "domain", "validation" }` | Add TXT record |
-| `/acme/wait-for-propagation` | POST | Bearer | `{ "domain", "validation", "nameservers"?, "timeout"?, "poll_interval"? }` | Wait for DNS propagation |
-| `/acme/cleanup` | POST | Bearer | `{ "domain" }` | Remove TXT record |
-| `/acme/deploy` | POST | Bearer | `{ "domain", "cert_pem", "chain_pem"?, "fullchain_pem", "privkey_pem" }` | Store certificate in Vault |
+| Endpoint                       | Method | Auth   | Body                                                                                               | Description                     |
+|--------------------------------|--------|--------|----------------------------------------------------------------------------------------------------|---------------------------------|
+| `/health`                      | GET    | No     | —                                                                                                  | Healthcheck                     |
+| `/acme/auth`                   | POST   | Bearer | `{ "domain", "validation" }`                                                                      | Add TXT record                  |
+| `/acme/wait-for-propagation`   | POST   | Bearer | `{ "domain", "validation", "nameservers"?, "timeout"?, "poll_interval"? }`                         | Wait for DNS propagation        |
+| `/acme/cleanup`                | POST   | Bearer | `{ "domain" }`                                                                                     | Remove TXT record               |
+| `/acme/deploy`                 | POST   | Bearer | `{ "domain", "cert_pem", "chain_pem"?, "fullchain_pem", "privkey_pem" }`                           | Store certificate in Vault      |
 
 ## Certbot usage
 
