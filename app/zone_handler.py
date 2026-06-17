@@ -4,9 +4,24 @@ import dns.name
 import dns.rdataclass
 import dns.rdataset
 import dns.rdatatype
-import dns.rdtypes
-import dns.rdtypes.TXT
+from dns.rdtypes.txtbase import TXTBase
 import dns.zone
+
+
+def _origin_from_zone_file(zone_file: Path) -> dns.name.Name:
+    """Derive the DNS origin from the zone file name.
+
+    Given a zone file path like ``/repo/zones/example.com.zone``,
+    returns the dns.name.Name for ``example.com.``.
+
+    Args:
+        zone_file: Absolute path to the Bind zone file.
+
+    Returns:
+        A fully qualified dns name (ending with dot).
+    """
+    zone_name = zone_file.stem
+    return dns.name.from_text(zone_name)
 
 
 def _resolve_zone_path(
@@ -94,10 +109,14 @@ def add_txt_record(
         )
 
     # Parse the existing Bind zone file into a dns.zone.Zone object.
-    zone = dns.zone.from_file(str(zone_file))
+    origin = _origin_from_zone_file(zone_file)
+    zone = dns.zone.from_file(str(zone_file), origin=origin)
 
-    # Build the fully qualified name for the ACME challenge TXT record.
-    acme_name = dns.name.from_text(f"_acme-challenge.{domain}")
+    # Build the absolute DNS name for the ACME challenge TXT record.
+    # The domain already includes the _acme-challenge. prefix as sent
+    # by the ACME client. Appending a trailing dot makes it absolute,
+    # which avoids confusion with the zone's relativization behaviour.
+    acme_name = dns.name.from_text(f"{domain}.")
     rdtype = dns.rdatatype.TXT
     rdclass = dns.rdataclass.IN
 
@@ -112,7 +131,7 @@ def add_txt_record(
         rdataset.clear()
 
     # Add the new validation token and write the zone back to disk.
-    rdataset.add(dns.rdtypes.TXT.TXT(rdclass, rdtype, [token.encode()]))
+    rdataset.add(TXTBase(rdclass, rdtype, [token.encode()]))
     zone.replace_rdataset(acme_name, rdataset)
     zone.to_file(str(zone_file))
     return str(zone_file)
@@ -148,15 +167,17 @@ def remove_txt_record(
     if zone_file is None:
         return None
 
-    zone = dns.zone.from_file(str(zone_file))
-    acme_name = dns.name.from_text(f"_acme-challenge.{domain}")
+    origin = _origin_from_zone_file(zone_file)
+    zone = dns.zone.from_file(str(zone_file), origin=origin)
+    acme_name = dns.name.from_text(f"{domain}.")
 
-    try:
-        # dnspython raises KeyError if the name does not exist at all
-        # in the zone. We catch it and return None to keep the caller
-        # idempotent.
-        zone.delete_rdataset(acme_name, dns.rdatatype.TXT)
-        zone.to_file(str(zone_file))
-        return str(zone_file)
-    except KeyError:
+    # Check if the TXT rdataset actually exists before trying to delete.
+    # In dnspython >= 2.8, delete_rdataset on a non-existent name is a
+    # silent no-op, so we must verify presence explicitly to distinguish
+    # between "successfully removed" and "nothing to remove".
+    rdataset = zone.get_rdataset(acme_name, dns.rdatatype.TXT)
+    if rdataset is None:
         return None
+    zone.delete_rdataset(acme_name, dns.rdatatype.TXT)
+    zone.to_file(str(zone_file))
+    return str(zone_file)
