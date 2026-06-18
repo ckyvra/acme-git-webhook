@@ -72,6 +72,27 @@ class RenewRequest(BaseModel):
     domain: str = Field(pattern=_DOMAIN_PATTERN)
 
 
+class DeployRequest(BaseModel):
+    """Request payload for the certificate deployment to targets.
+
+    Sent to ``POST /deploy/{domain}`` to trigger deployment of an
+    already-stored certificate to one or more configured targets.
+
+    Attributes:
+        target_names: Optional list of target names to restrict
+            deployment to.  When *None* or empty, every registered
+            target is used.
+        fullchain_pem: PEM-encoded full certificate chain.  When
+            provided the certificate is deployed directly without
+            reading from Vault.
+        privkey_pem: PEM-encoded private key (required when
+            ``fullchain_pem`` is provided).
+    """
+    target_names: list[str] | None = None
+    fullchain_pem: str | None = None
+    privkey_pem: str | None = None
+
+
 class CertDeployRequest(BaseModel):
     """Request payload for the certificate deployment endpoint.
 

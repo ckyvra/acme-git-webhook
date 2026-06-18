@@ -10,6 +10,8 @@ from fastapi.testclient import TestClient
 from git import Repo
 
 from app.config import AppConfig, AuthConfig, DnsConfig, F5Config, F5HostConfig, MonitorConfig, RepoConfig, VaultConfig, WebhookConfig
+from app.targets.base import DeployResult
+from app.targets.manager import DeployManager
 from app.main import app, config as global_config, vault_handler as global_vault
 
 
@@ -676,11 +678,6 @@ class TestAcmeAuthWithDnsConfig:
 
 class TestAcmeDeployWithF5:
     def test_deploy_with_f5_success(self, client: TestClient, tmp_path: Path):
-        secret_id_file = tmp_path / "vault_secret_id"
-        secret_id_file.write_text("test-secret-id")
-        pw_file = tmp_path / "f5_pass"
-        pw_file.write_text("f5-secret")
-
         import app.main as m
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
@@ -691,63 +688,41 @@ class TestAcmeDeployWithF5:
                 zone_path="zones",
                 zone_file_suffix=".zone",
             ),
-            vault=VaultConfig(
-                addr="https://vault.example.com:8200",
-                role_id="role-abc",
-                secret_id_path=str(secret_id_file),
-                verify=False,
-                skip=False,
-            ),
-            f5=F5Config(hosts=[
-                F5HostConfig(
-                    addr="https://bigip.example.com",
-                    username="admin",
-                    password_path=str(pw_file),
-                    verify=False,
-                ),
-            ]),
         )
-        m.vault_handler = MagicMock()
-        m.vault_handler.store_cert.return_value = "secret/certs/example.com"
 
-        mock_f5 = MagicMock()
-        mock_f5.deploy_cert.return_value = [
-            {"host": "https://bigip.example.com", "status": "ok", "updated_profiles": ["example-ssl"]},
-        ]
-        m.f5_handler = mock_f5
+        mock_target = MagicMock()
+        mock_target.name = "f5-paris"
+        mock_target.provider_type = "f5"
+        mock_target.deploy.return_value = DeployResult(
+            status="ok",
+            target="f5-paris",
+            provider="f5",
+            details={"host": "https://bigip.example.com", "updated_profiles": ["example-ssl"]},
+        )
+
+        mgr = DeployManager([])
+        mgr._targets = {"f5-paris": mock_target}
+        m.deploy_manager = mgr
 
         payload = {
-            "domain": "example.com",
-            "cert_pem": "cert-data",
-            "chain_pem": "chain-data",
+            "target_names": ["f5-paris"],
             "fullchain_pem": "fullchain-data",
             "privkey_pem": "key-data",
         }
         resp = client.post(
-            "/acme/deploy",
+            "/deploy/example.com",
             json=payload,
             headers={"Authorization": "Bearer test-key"},
         )
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ok"
-        assert data["vault_path"] == "secret/certs/example.com"
-        assert data["f5_results"] == [
-            {"host": "https://bigip.example.com", "status": "ok", "updated_profiles": ["example-ssl"]},
-        ]
-        mock_f5.deploy_cert.assert_called_once_with(
-            domain="example.com",
-            cert_pem="cert-data",
-            fullchain_pem="fullchain-data",
-            privkey_pem="key-data",
-        )
+        assert len(data["results"]) == 1
+        assert data["results"][0]["status"] == "ok"
+        assert data["results"][0]["target"] == "f5-paris"
+        mock_target.deploy.assert_called_once()
 
     def test_deploy_with_f5_error(self, client: TestClient, tmp_path: Path):
-        secret_id_file = tmp_path / "vault_secret_id"
-        secret_id_file.write_text("test-secret-id")
-        pw_file = tmp_path / "f5_pass"
-        pw_file.write_text("f5-secret")
-
         import app.main as m
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
@@ -758,45 +733,33 @@ class TestAcmeDeployWithF5:
                 zone_path="zones",
                 zone_file_suffix=".zone",
             ),
-            vault=VaultConfig(
-                addr="https://vault.example.com:8200",
-                role_id="role-abc",
-                secret_id_path=str(secret_id_file),
-                verify=False,
-                skip=False,
-            ),
-            f5=F5Config(hosts=[
-                F5HostConfig(
-                    addr="https://bigip.example.com",
-                    username="admin",
-                    password_path=str(pw_file),
-                    verify=False,
-                ),
-            ]),
         )
-        m.vault_handler = MagicMock()
-        m.vault_handler.store_cert.return_value = "secret/certs/example.com"
 
-        mock_f5 = MagicMock()
-        mock_f5.deploy_cert.side_effect = Exception("F5 connection refused")
-        m.f5_handler = mock_f5
+        mock_target = MagicMock()
+        mock_target.name = "f5-paris"
+        mock_target.provider_type = "f5"
+        mock_target.deploy.side_effect = Exception("F5 connection refused")
+
+        mgr = DeployManager([])
+        mgr._targets = {"f5-paris": mock_target}
+        m.deploy_manager = mgr
 
         payload = {
-            "domain": "example.com",
-            "cert_pem": "cert-data",
+            "target_names": ["f5-paris"],
             "fullchain_pem": "fullchain-data",
             "privkey_pem": "key-data",
         }
         resp = client.post(
-            "/acme/deploy",
+            "/deploy/example.com",
             json=payload,
             headers={"Authorization": "Bearer test-key"},
         )
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ok"
-        assert "f5_results" in data
-        assert data["f5_results"] == [{"status": "error", "error": "F5 connection refused"}]
+        assert len(data["results"]) == 1
+        assert data["results"][0]["status"] == "error"
+        assert "F5 connection refused" in data["results"][0]["error"]
 
     def test_deploy_without_f5_config(self, client: TestClient, tmp_path: Path):
         secret_id_file = tmp_path / "vault_secret_id"
@@ -822,7 +785,7 @@ class TestAcmeDeployWithF5:
         )
         m.vault_handler = MagicMock()
         m.vault_handler.store_cert.return_value = "secret/certs/example.com"
-        m.f5_handler = None
+        m.deploy_manager = None
 
         payload = {
             "domain": "example.com",
@@ -837,7 +800,7 @@ class TestAcmeDeployWithF5:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert "f5_results" not in data
+        assert "results" not in data
 
 
 class TestAcmeWaitForPropagationWithConfig:

@@ -17,18 +17,18 @@ logger = logging.getLogger(__name__)
 
 from app.auth import verify_api_key
 from app.cert_monitor import CertMonitor
-from app.config import AppConfig, load_config
+from app.config import AppConfig, F5TargetConfig, load_config
 from app.dns_probe import check_propagation, validate_nameserver
-from app.f5_handler import F5Handler
+from app.targets.manager import DeployManager
 from app.git_handler import clone_or_pull, commit_and_push
-from app.models import AcmeRequest, CertDeployRequest, PropagationRequest, RenewRequest
+from app.models import AcmeRequest, CertDeployRequest, DeployRequest, PropagationRequest, RenewRequest
 from app.vault_handler import VaultHandler
 from app.zone_handler import add_txt_record, remove_txt_record
 
 # Module-level globals, populated once at startup via the lifespan hook.
 config: AppConfig | None = None
 vault_handler: VaultHandler | None = None
-f5_handler: F5Handler | None = None
+deploy_manager: DeployManager | None = None
 cert_monitor: CertMonitor | None = None
 
 # Reusable FastAPI security scheme that extracts the Bearer token from
@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI):
     the CONFIG_PATH environment variable, defaulting to "config.yaml"
     relative to the working directory.
     """
-    global config, vault_handler, f5_handler, cert_monitor
+    global config, vault_handler, deploy_manager, cert_monitor
     config_path = os.getenv("CONFIG_PATH", "config.yaml")
     config = load_config(config_path)
     env_key = os.environ.get("ACME_WEBHOOK_API_KEY")
@@ -66,16 +66,35 @@ async def lifespan(app: FastAPI):
         config.auth.api_keys.append(env_key)
     if config.vault and not config.vault.skip:
         vault_handler = VaultHandler(config.vault)
+
+    # Build the target list: merge explicit ``targets`` with any
+    # legacy ``f5`` section so existing configs keep working.
+    target_configs: list = []
+    if config.targets:
+        target_configs.extend(config.targets)
     if config.f5:
-        f5_handler = F5Handler(config.f5)
+        for i, host in enumerate(config.f5.hosts):
+            target_configs.append(
+                F5TargetConfig(
+                    name=host.name or f"f5-{i}",
+                    addr=host.addr,
+                    username=host.username,
+                    password_path=host.password_path,
+                    verify=host.verify,
+                    timeout=30,
+                )
+            )
+    if target_configs:
+        deploy_manager = DeployManager(target_configs)
+
     if config.monitor:
         cert_monitor = CertMonitor(config.monitor, vault_handler)
         cert_monitor.start()
     yield
     if cert_monitor is not None:
         cert_monitor.stop()
-    if f5_handler is not None:
-        f5_handler.close()
+    if deploy_manager is not None:
+        deploy_manager.close()
 
 
 app = FastAPI(title="acme-git-webhook", lifespan=lifespan)
@@ -510,24 +529,101 @@ def acme_deploy(
             detail="Vault operation failed",
         )
 
-    result = {
+    return {
         "status": "ok",
         "domain": req.domain,
         "vault_path": vault_path,
     }
 
-    f5 = f5_handler
-    if f5 is not None:
-        try:
-            f5_results = f5.deploy_cert(
-                domain=req.domain,
-                cert_pem=req.cert_pem,
-                fullchain_pem=req.fullchain_pem,
-                privkey_pem=req.privkey_pem,
-            )
-            result["f5_results"] = f5_results
-        except Exception as e:
-            logger.error("Failed to deploy certificate to F5: %s", e)
-            result["f5_results"] = [{"status": "error", "error": str(e)}]
 
-    return result
+@app.get("/targets")
+def list_targets(
+    _token: str = Depends(_auth_dep),
+):
+    """List all configured deployment targets and their providers."""
+    mgr = deploy_manager
+    if mgr is None:
+        return {"targets": []}
+    return {
+        "targets": [
+            {"name": name, "provider": t.provider_type}
+            for name, t in mgr.targets.items()
+        ]
+    }
+
+
+@app.post("/deploy/{domain}")
+def deploy_cert_to_targets(
+    domain: str,
+    req: DeployRequest,
+    _token: str = Depends(_auth_dep),
+):
+    """Deploy an existing Vault-stored certificate to one or more targets.
+
+    If ``fullchain_pem`` and ``privkey_pem`` are provided in the request
+    body they are used directly; otherwise the endpoint tries to read the
+    certificate from Vault.
+
+    When ``target_names`` is *None* or empty, the certificate is
+    deployed to every registered target.
+    """
+    mgr = deploy_manager
+    if mgr is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No deployment targets configured",
+        )
+
+    fullchain_pem = req.fullchain_pem
+    privkey_pem = req.privkey_pem
+
+    # Fall back to reading from Vault when PEMs are not provided.
+    if fullchain_pem is None or privkey_pem is None:
+        handler = vault_handler
+        if handler is None:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Vault handler not available, provide PEMs explicitly",
+            )
+        try:
+            secret = handler._client.secrets.kv.v2.read_secret_version(
+                mount_point=handler.config.kv_mount,
+                path=f"{handler.config.certs_path}/{domain}",
+            )
+            data = secret.get("data", {}).get("data", {})
+            fullchain_pem = data.get("fullchain.pem", "")
+            privkey_pem = data.get("privkey.pem", "")
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Failed to read certificate from Vault: {e}",
+            )
+
+    results = mgr.deploy(
+        domain=domain,
+        fullchain_pem=fullchain_pem,
+        privkey_pem=privkey_pem,
+        target_names=req.target_names,
+    )
+
+    return {
+        "status": "ok",
+        "domain": domain,
+        "results": [r.model_dump() for r in results],
+    }
+
+
+@app.post("/deploy/{domain}/{target}")
+def deploy_cert_to_single_target(
+    domain: str,
+    target: str,
+    req: DeployRequest,
+    _token: str = Depends(_auth_dep),
+):
+    """Deploy a certificate to a single named target.
+
+    Convenience shortcut around ``POST /deploy/{domain}`` with
+    ``target_names`` already set in the URL.
+    """
+    req.target_names = [target]
+    return deploy_cert_to_targets(domain, req, _token)

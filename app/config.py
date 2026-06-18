@@ -1,9 +1,10 @@
 import logging
 import os
 from pathlib import Path
+from typing import Annotated, Literal, Union
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,87 @@ class F5Config(BaseModel):
     hosts: list[F5HostConfig]
 
 
+class F5TargetConfig(BaseModel):
+    """Configuration for a single F5 Big-IP deployment target.
+
+    Attributes:
+        name: Unique identifier used to reference this target in API calls.
+        provider: Discriminator — must be ``"f5"``.
+        addr: Base URL of the F5 iControl REST endpoint.
+        username: F5 admin username.
+        password_path: Path to a file containing the F5 password.
+        verify: Whether to verify the F5 TLS certificate (default: True).
+        timeout: HTTP request timeout in seconds (default: 30).
+    """
+    name: str
+    provider: Literal["f5"] = "f5"
+    addr: str
+    username: str
+    password_path: str
+    verify: bool = True
+    timeout: int = 30
+
+
+class IvantiTargetConfig(BaseModel):
+    """Configuration for an Ivanti Connect Secure (VPN) deployment target.
+
+    Attributes:
+        name: Unique identifier used to reference this target in API calls.
+        provider: Discriminator — must be ``"ivanti"``.
+        addr: Base URL of the Ivanti REST API endpoint.
+        api_key_path: Path to a file containing the API key.
+        verify: Whether to verify the Ivanti TLS certificate (default: True).
+        internal_ports: Internal interfaces to bind the certificate to.
+        external_ports: External interfaces to bind the certificate to.
+        management_interface: Whether to also bind to the management interface.
+        timeout: HTTP request timeout in seconds (default: 60).
+    """
+    name: str
+    provider: Literal["ivanti"] = "ivanti"
+    addr: str
+    api_key_path: str
+    verify: bool = True
+    internal_ports: list[str] = []
+    external_ports: list[str] = []
+    management_interface: bool = False
+    timeout: int = 60
+
+
+class ExchangeTargetConfig(BaseModel):
+    """Configuration for an Exchange SMTP deployment target (WinRM).
+
+    Attributes:
+        name: Unique identifier used to reference this target in API calls.
+        provider: Discriminator — must be ``"exchange"``.
+        addr: WinRM endpoint URL (e.g. ``https://exchange.example.com:5986``).
+        transport: WinRM authentication transport (``"ntlm"`` or ``"kerberos"``).
+        username: WinRM username (domain format: ``DOMAIN\\user``).
+        password_path: Path to a file containing the WinRM password.
+        verify: Whether to verify the WinRM TLS certificate (default: True).
+        remote_path: Remote directory for staging the PFX file.
+        services: Exchange services to enable (default: ``"SMTP"``).
+        timeout: WinRM operation timeout in seconds (default: 120).
+    """
+    name: str
+    provider: Literal["exchange"] = "exchange"
+    addr: str
+    transport: Literal["ntlm", "kerberos"] = "ntlm"
+    username: str
+    password_path: str
+    verify: bool = True
+    remote_path: str = "C:\\certs"
+    services: str = "SMTP"
+    timeout: int = 120
+
+
+# Discriminated union so Pydantic selects the correct model based on
+# the value of the ``provider`` field in the YAML configuration.
+TargetConfig = Annotated[
+    Union[F5TargetConfig, IvantiTargetConfig, ExchangeTargetConfig],
+    Field(discriminator="provider"),
+]
+
+
 class DnsConfig(BaseModel):
     nameservers: list[str] = ["8.8.8.8", "1.1.1.1"]
     timeout: int = 120
@@ -125,6 +207,7 @@ class AppConfig(BaseModel):
     f5: F5Config | None = None
     dns: DnsConfig | None = None
     monitor: MonitorConfig | None = None
+    targets: list[TargetConfig] | None = None
 
 
 def load_config(path: str | None = None) -> AppConfig:
