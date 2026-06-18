@@ -14,6 +14,12 @@ def _build_target(cfg: TargetConfig) -> DeployTarget:
     if cfg.provider == "f5":
         from app.targets.f5 import F5Target
         return F5Target(cfg)
+    if cfg.provider == "ivanti":
+        from app.targets.ivanti import IvantiTarget
+        return IvantiTarget(cfg)
+    if cfg.provider == "exchange":
+        from app.targets.exchange import ExchangeTarget
+        return ExchangeTarget(cfg)
     msg = f"Unknown target provider: {cfg.provider}"
     raise ValueError(msg)
 

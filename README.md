@@ -7,7 +7,8 @@
 
 FastAPI webhook that provisions ACME DNS-01 challenges by adding/removing
 TXT records in Bind zone files stored in a Git repository, optionally
-deploys certificates to F5 Big-IP and monitors certificate expiration.
+deploys certificates to F5 Big-IP, Ivanti VPN, Exchange SMTP (or any
+custom target via the DeployTarget interface) and monitors expiration.
 
 ## How it works
 
@@ -25,12 +26,12 @@ acme-git-webhook
         │  3. git commit + push
         │  4. DNS propagation check (optional, auto)
         │  5. Vault: store certificate
-        │  6. F5 Big-IP: upload cert + update SSL profile (optional)
-        │  7. Monitor: check expiration (optional)
-        ├──────────────────────┬───────────────────────┬───────────────────┐
-        ▼                      ▼                       ▼                    ▼
-GitHub repo           HashiCorp Vault          F5 Big-IP            Logs / Webhook
-(Bind zones)          (KV store)               (iControl REST)      (alert on expiry)
+        │  6. Deploy targets: F5, Ivanti, Exchange... (optional)
+        │  7. Monitor: check expiration + auto-renew (optional)
+        ├──────────────────────┬───────────────────────┬──────────────────────┐
+        ▼                      ▼                       ▼                      ▼
+GitHub repo           HashiCorp Vault          Targets (F5 / Ivanti /    Logs / Webhook
+(Bind zones)          (KV store)               Exchange / custom)        (alert on expiry)
         │                      │                       │
         │  CI/CD               │  Services retrieve     │  SSL profile updated
         ▼                      ▼                       ▼
@@ -40,7 +41,13 @@ Authoritative DNS      secret/certs/          /Common/example.com
 The ACME client calls the webhook three times per certificate:
 1. **auth** — injects `_acme-challenge.<domain>. IN TXT "<validation>"` into the zone file and pushes to Git
 2. **cleanup** — removes the TXT record after validation
-3. **deploy** — stores the issued certificate in HashiCorp Vault, then uploads it to F5 Big-IP and updates matching Client SSL profiles (if configured)
+3. **deploy** — stores the issued certificate in HashiCorp Vault (targets are deployed separately via `POST /deploy/{domain}`)
+
+Wildcard domains (`*.example.com`) are fully supported:
+- **DNS**: the zone file is resolved by stripping the `*.` prefix → `example.com.zone`
+- **Vault**: stored at `secret/certs/*.example.com/` (literal `*` in path)
+- **F5**: domain is sanitized to `wildcard.example.com` for object names (valid on Big-IP)
+- **Ivanti / Exchange**: the wildcard SAN in the certificate X.509 is handled natively
 
 ## Configuration
 
@@ -97,21 +104,91 @@ auth response, removing the need for a separate call to
 The `/acme/wait-for-propagation` endpoint also uses these defaults
 when request fields are omitted.
 
-### F5 Big-IP (optional)
+### Deploy targets (optional)
+
+Certificates can be deployed to multiple systems via a pluggable
+`DeployTarget` interface. Each target is configured in the `targets`
+section of `config.yaml`:
 
 ```yaml
-f5:
-  hosts:
-    - addr: "https://bigip.example.com"
-      username: "admin"
-      password_path: "/run/secrets/f5_password"
-      verify: true
+targets:
+  - name: "f5-paris"
+    provider: "f5"
+    addr: "https://bigip.example.com"
+    username: "admin"
+    password_path: "/run/secrets/f5_password"
+    verify: true
+    timeout: 60
+
+  - name: "ivanti-vpn"
+    provider: "ivanti"
+    addr: "https://ivanti.example.com"
+    api_key_path: "/run/secrets/ivanti_api_key"
+    internal_ports: ["8443"]
+    external_ports: ["443"]
+    management_interface: false
+    verify: true
+    timeout: 120
+
+  - name: "exchange-smtp"
+    provider: "exchange"
+    addr: "https://exchange.example.com:5986"
+    transport: "ntlm"
+    username: "DOMAIN\\svc-cert"
+    password_path: "/run/secrets/exchange_password"
+    remote_path: "C:\\certs"
+    services: "SMTP"
+    verify: true
+    timeout: 180
 ```
 
-When configured, the `/acme/deploy` endpoint uploads the fullchain and
-private key to each F5 host via iControl REST, then auto-detects Client
-SSL profiles whose `cert` field contains the domain name and updates them
-to use the new certificate.
+Deploy a certificate to all targets or a specific one:
+
+```bash
+# All configured targets
+curl -X POST https://webhook:8000/deploy/example.com \
+  -H "Authorization: Bearer $API_KEY"
+
+# Specific target only
+curl -X POST https://webhook:8000/deploy/example.com/f5-paris \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+Deploy routing per domain is stored in Vault metadata. Set it via:
+
+```bash
+curl -X PATCH https://webhook:8000/certs/example.com/targets \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"targets": ["f5-paris", "ivanti-vpn"]}'
+```
+
+**Legacy `f5` config** is automatically migrated to a target named
+`f5` on startup if no `targets` section exists.
+
+#### Provider: F5 Big-IP
+
+Uploads fullchain + private key to each F5 host via iControl REST
+(`/mgmt/tm/sys/file/ssl-cert` and `/mgmt/tm/sys/file/ssl-key`), then
+auto-detects Client SSL profiles whose `cert` field contains the domain
+name and updates them to use the new certificate. Wildcard domains are
+sanitized (`.` → `_`, `*` stripped) for Big-IP object names.
+
+#### Provider: Ivanti VPN
+
+Converts the PEM certificate to PFX with a random password, then uploads
+it via the Ivanti REST API (`POST /api/v1/system/certificates/device-certificates`).
+The PFX password is regenerated on each deployment and never stored.
+
+#### Provider: Exchange SMTP
+
+Converts the PEM certificate to PFX with a random password, copies it
+to the Exchange server via WinRM, then runs PowerShell to import and
+enable it for SMTP:
+
+```powershell
+Import-ExchangeCertificate -FileName "C:\certs\example.pfx" -Password (ConvertTo-SecureString -String '<password>' -AsPlainText -Force) | Enable-ExchangeCertificate -Services SMTP
+```
 
 ### Certificate expiration monitoring (optional)
 
@@ -135,7 +212,11 @@ status is also exposed via `GET /certs/status`.
 | `/acme/auth`                   | POST   | Bearer | `{ "domain", "validation" }`                                                                      | Add TXT record + optional auto propagation |
 | `/acme/wait-for-propagation`   | POST   | Bearer | `{ "domain", "validation", "nameservers"?, "timeout"?, "poll_interval"? }`                         | Wait for DNS propagation (uses config defaults) |
 | `/acme/cleanup`                | POST   | Bearer | `{ "domain" }`                                                                                     | Remove TXT record               |
-| `/acme/deploy`                 | POST   | Bearer | `{ "domain", "cert_pem", "chain_pem"?, "fullchain_pem", "privkey_pem" }`                           | Store certificate in Vault + deploy to F5 |
+| `/acme/deploy`                 | POST   | Bearer | `{ "domain", "cert_pem", "chain_pem"?, "fullchain_pem", "privkey_pem" }`                           | Store certificate in Vault only |
+| `/acme/renew`                  | POST   | Bearer | `{ "domain" }`                                                                                     | Trigger certbot renew for domain |
+| `/targets`                     | GET    | Bearer | —                                                                                                  | List configured deploy targets  |
+| `/deploy/{domain}`             | POST   | Bearer | —                                                                                                  | Deploy cert to all targets      |
+| `/deploy/{domain}/{target}`    | POST   | Bearer | —                                                                                                  | Deploy cert to specific target  |
 | `/certs/status`                | GET    | Bearer | —                                                                                                  | List certificates and days left |
 
 ## Certbot usage
@@ -301,7 +382,7 @@ kubectl get pods -l app.kubernetes.io/instance=acme-webhook
 | `repo.*` | Git repository URL, branch, zone path |
 | `vault.*` | HashiCorp Vault address, AppRole role_id, verify |
 | `dns.*` | Nameservers, timeout, auto-propagation on/off |
-| `f5.*` | Big-IP hosts (addr, username, verify) |
+| `targets.*` | Deploy targets (F5, Ivanti, Exchange, ...) |
 | `monitor.*` | Check interval, warning thresholds, renew command |
 | `acme.*` | Enable/disable the GlobalSign registration Job |
 | `ingress.*` | Hostname, ingress class, cert-manager issuer |
