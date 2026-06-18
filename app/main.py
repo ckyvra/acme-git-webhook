@@ -61,6 +61,9 @@ async def lifespan(app: FastAPI):
     global config, vault_handler, f5_handler, cert_monitor
     config_path = os.getenv("CONFIG_PATH", "config.yaml")
     config = load_config(config_path)
+    env_key = os.environ.get("ACME_WEBHOOK_API_KEY")
+    if env_key and config.auth:
+        config.auth.api_keys.append(env_key)
     if config.vault and not config.vault.skip:
         vault_handler = VaultHandler(config.vault)
     if config.f5:

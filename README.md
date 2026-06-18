@@ -262,16 +262,31 @@ pytest -v
 
 ## Helm chart
 
-A Helm chart is available in `helm/`. Quick start:
+A Helm chart is available in `helm/`. All secrets (API key, SSH deploy
+key, Vault AppRole secret, F5 password, GlobalSign EAB) are sourced
+from HashiCorp Vault via the **External Secrets Operator**. Populate a
+Vault secret at the path configured in `values.yaml`:
+
+```hcl
+path "secret/data/acme-webhook" {
+  capabilities = ["read"]
+}
+```
+
+The secret must contain these properties: `api_key`, `deploy_key`,
+`vault_secret_id`, `f5_password`, `acme_eab_kid`, `acme_eab_hmac_key`,
+`acme_email`.
+
+Quick start:
 
 ```bash
-# 1. Edit values.yaml with your configuration
+# 1. Edit non-sensitive configuration
 vim helm/values.yaml
 
-# 2. Install the chart
+# 2. Install the chart — the ExternalSecret pulls secrets from Vault
 helm install acme-webhook ./helm
 
-# 3. Watch the one-time ACME registration job complete
+# 3. The post-install Job registers the GlobalSign ACME account
 kubectl wait --for=condition=complete job/acme-webhook-acme-git-webhook-certbot-init --timeout=60s
 
 # 4. Verify
@@ -282,13 +297,13 @@ kubectl get pods -l app.kubernetes.io/instance=acme-webhook
 
 | Section | Key features |
 |---------|-------------|
-| `webhook.apiKey` | Bearer token for ACME client calls |
-| `repo.*` | Git repository URL, branch, zone path, SSH deploy key |
-| `vault.*` | HashiCorp Vault address, AppRole credentials, verify |
+| `externalSecret.*` | ESO SecretStore reference + Vault path |
+| `repo.*` | Git repository URL, branch, zone path |
+| `vault.*` | HashiCorp Vault address, AppRole role_id, verify |
 | `dns.*` | Nameservers, timeout, auto-propagation on/off |
-| `f5.*` | Big-IP hosts (addr, username, password, verify) |
+| `f5.*` | Big-IP hosts (addr, username, verify) |
 | `monitor.*` | Check interval, warning thresholds, renew command |
-| `acme.*` | GlobalSign EAB credentials (one-time registration) |
+| `acme.*` | Enable/disable the GlobalSign registration Job |
 | `ingress.*` | Hostname, ingress class, cert-manager issuer |
 | `persistence.*` | PVC size and access mode |
 

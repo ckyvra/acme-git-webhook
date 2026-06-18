@@ -7,10 +7,21 @@ image:
   tag: latest
   pullPolicy: Always
 
-# ── Authentication ─────────────────────────────────────────────────
+# ── External Secrets ────────────────────────────────────────────────
+# All secrets (api_key, deploy_key, vault_secret_id, f5_password,
+# acme_eab_*) are sourced from HashiCorp Vault via External Secrets
+# Operator. The Vault secret at `vault.path` must contain these
+# properties: api_key, deploy_key, vault_secret_id, f5_password,
+# acme_eab_kid, acme_eab_hmac_key, acme_email.
 
-webhook:
-  apiKey: "changeme-acme-webhook-api-key"
+externalSecret:
+  enabled: true
+  refreshInterval: 1h
+  secretStore:
+    name: vault-backend
+    kind: ClusterSecretStore
+  vault:
+    path: secret/data/acme-webhook
 
 # ── Git repository (Bind zone files) ───────────────────────────────
 
@@ -19,11 +30,6 @@ repo:
   branch: "main"
   zonePath: "zones"
   zoneFileSuffix: ".zone"
-  # SSH deploy key with write access to the repository
-  deployKey: |
-    -----BEGIN OPENSSH PRIVATE KEY-----
-    changeme
-    -----END OPENSSH PRIVATE KEY-----
 
 # ── HashiCorp Vault (optional) ─────────────────────────────────────
 
@@ -31,7 +37,6 @@ vault:
   enabled: true
   addr: "https://vault.example.com:8200"
   roleId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-  secretId: "changeme-vault-secret-id"
   kvMount: "secret"
   certsPath: "certs"
   verify: true
@@ -54,7 +59,6 @@ f5:
   hosts:
     - addr: "https://bigip.example.com"
       username: "admin"
-      password: "changeme-f5-password"
       verify: true
 
 # ── Certificate monitor & auto-renewal (optional) ──────────────────
@@ -74,16 +78,12 @@ monitor:
   renewTimeout: 300
   renewThreshold: 14
 
-# ── ACME initial registration (one-time) ───────────────────────────
-# GlobalSign requires External Account Binding (EAB).
-# Obtain EAB KID and HMAC key from Atlas → API Credentials.
-# Leave both empty to skip the registration job.
+# ── ACME GlobalSign registration (one-time) ────────────────────────
+# EAB credentials are sourced from the ExternalSecret.
+# Set enabled: true to create the post-install Job.
 
 acme:
-  eabKid: ""
-  eabHmacKey: ""
-  email: "admin@example.com"
-  server: "https://emea.acme.atlas.globalsign.com/directory"
+  enabled: true
 
 # ── Ingress ────────────────────────────────────────────────────────
 

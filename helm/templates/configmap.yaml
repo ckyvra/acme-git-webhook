@@ -6,8 +6,7 @@ metadata:
 data:
   config.yaml: |
     auth:
-      api_keys:
-        - {{ .Values.webhook.apiKey | quote }}
+      api_keys: []
 
     webhook:
       work_dir: "/data/acme-git-webhook/work"

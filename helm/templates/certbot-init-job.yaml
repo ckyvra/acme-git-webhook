@@ -1,4 +1,4 @@
-{{- if and .Values.acme.eabKid .Values.acme.eabHmacKey }}
+{{- if and .Values.externalSecret.enabled .Values.acme.enabled }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -24,12 +24,25 @@ spec:
             - /bin/bash
             - /app/scripts/register-acme.sh
           args:
-            - {{ .Values.acme.eabKid | quote }}
-            - {{ .Values.acme.eabHmacKey | quote }}
-            - {{ .Values.acme.email | quote }}
+            - "$(ACME_EAB_KID)"
+            - "$(ACME_EAB_HMAC_KEY)"
+            - "$(ACME_EMAIL)"
           env:
-            - name: GIT_SSH_COMMAND
-              value: "ssh -i /run/secrets/deploy_key -o StrictHostKeyChecking=no"
+            - name: ACME_EAB_KID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "webhook.fullname" . }}
+                  key: acme_eab_kid
+            - name: ACME_EAB_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "webhook.fullname" . }}
+                  key: acme_eab_hmac_key
+            - name: ACME_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "webhook.fullname" . }}
+                  key: acme_email
           volumeMounts:
             - name: data
               mountPath: /data/acme-git-webhook
