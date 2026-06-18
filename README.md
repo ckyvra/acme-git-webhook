@@ -23,13 +23,14 @@ acme-git-webhook
         │  1. git pull
         │  2. dnspython: update zone file
         │  3. git commit + push
-        │  4. Vault: store certificate
-        │  5. F5 Big-IP: upload cert + update SSL profile (optional)
-        │  6. Monitor: check expiration (optional)
-        ├──────────────────────┬───────────────────────┬─────────────────┐
-        ▼                      ▼                       ▼                  ▼
-GitHub repo           HashiCorp Vault          F5 Big-IP          Logs / Webhook
-(Bind zones)          (KV store)               (iControl REST)    (alert on expiry)
+        │  4. DNS propagation check (optional, auto)
+        │  5. Vault: store certificate
+        │  6. F5 Big-IP: upload cert + update SSL profile (optional)
+        │  7. Monitor: check expiration (optional)
+        ├──────────────────────┬───────────────────────┬───────────────────┐
+        ▼                      ▼                       ▼                    ▼
+GitHub repo           HashiCorp Vault          F5 Big-IP            Logs / Webhook
+(Bind zones)          (KV store)               (iControl REST)      (alert on expiry)
         │                      │                       │
         │  CI/CD               │  Services retrieve     │  SSL profile updated
         ▼                      ▼                       ▼
@@ -74,6 +75,28 @@ Vault AppRole is used for authentication. The `secret_id` is read from
 a file at runtime (never stored in the config file). Mount the file
 as a Docker secret at the path specified by `secret_id_path`.
 
+### DNS propagation (optional)
+
+```yaml
+dns:
+  nameservers:
+    - "8.8.8.8"
+    - "1.1.1.1"
+  timeout: 120
+  poll_interval: 5
+  wait_for_propagation: true
+```
+
+When `wait_for_propagation` is `true`, the `/acme/auth` endpoint
+automatically polls the configured nameservers after pushing the
+zone change and waits until the TXT record is visible (or the
+`timeout` is reached). The propagation result is included in the
+auth response, removing the need for a separate call to
+`/acme/wait-for-propagation`.
+
+The `/acme/wait-for-propagation` endpoint also uses these defaults
+when request fields are omitted.
+
 ### F5 Big-IP (optional)
 
 ```yaml
@@ -109,8 +132,8 @@ status is also exposed via `GET /certs/status`.
 | Endpoint                       | Method | Auth   | Body                                                                                               | Description                     |
 |--------------------------------|--------|--------|----------------------------------------------------------------------------------------------------|---------------------------------|
 | `/health`                      | GET    | No     | —                                                                                                  | Healthcheck                     |
-| `/acme/auth`                   | POST   | Bearer | `{ "domain", "validation" }`                                                                      | Add TXT record                  |
-| `/acme/wait-for-propagation`   | POST   | Bearer | `{ "domain", "validation", "nameservers"?, "timeout"?, "poll_interval"? }`                         | Wait for DNS propagation        |
+| `/acme/auth`                   | POST   | Bearer | `{ "domain", "validation" }`                                                                      | Add TXT record + optional auto propagation |
+| `/acme/wait-for-propagation`   | POST   | Bearer | `{ "domain", "validation", "nameservers"?, "timeout"?, "poll_interval"? }`                         | Wait for DNS propagation (uses config defaults) |
 | `/acme/cleanup`                | POST   | Bearer | `{ "domain" }`                                                                                     | Remove TXT record               |
 | `/acme/deploy`                 | POST   | Bearer | `{ "domain", "cert_pem", "chain_pem"?, "fullchain_pem", "privkey_pem" }`                           | Store certificate in Vault + deploy to F5 |
 | `/certs/status`                | GET    | Bearer | —                                                                                                  | List certificates and days left |
@@ -118,6 +141,9 @@ status is also exposed via `GET /certs/status`.
 ## Certbot usage
 
 Create a hook script `acme-hook.sh`:
+
+When `wait_for_propagation: true` in the config, only one call per
+phase is needed — the auth endpoint handles propagation internally:
 
 ```bash
 #!/bin/bash
@@ -129,11 +155,6 @@ if [ "$1" = "auth" ]; then
     -H "Authorization: Bearer $API_KEY" \
     -H "Content-Type: application/json" \
     -d "{\"domain\": \"$CERTBOT_DOMAIN\", \"validation\": \"$CERTBOT_VALIDATION\"}"
-
-  curl -s -X POST "$HOOK_URL/acme/wait-for-propagation" \
-    -H "Authorization: Bearer $API_KEY" \
-    -H "Content-Type: application/json" \
-    -d "{\"domain\": \"$CERTBOT_DOMAIN\", \"validation\": \"$CERTBOT_VALIDATION\", \"timeout\": 120, \"poll_interval\": 5}"
 
 elif [ "$1" = "cleanup" ]; then
   curl -s -X POST "$HOOK_URL/acme/cleanup" \

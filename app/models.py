@@ -56,8 +56,8 @@ class PropagationRequest(BaseModel):
     domain: str = Field(pattern=_ACME_DOMAIN_PATTERN)
     validation: str = Field(min_length=1, max_length=255)
     nameservers: list[str] | None = None
-    timeout: int = 120
-    poll_interval: int = 5
+    timeout: int | None = None
+    poll_interval: int | None = None
 
 
 class CertDeployRequest(BaseModel):

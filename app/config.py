@@ -95,6 +95,13 @@ class F5Config(BaseModel):
     hosts: list[F5HostConfig]
 
 
+class DnsConfig(BaseModel):
+    nameservers: list[str] = ["8.8.8.8", "1.1.1.1"]
+    timeout: int = 120
+    poll_interval: int = 5
+    wait_for_propagation: bool = False
+
+
 class MonitorConfig(BaseModel):
     check_interval_hours: int = 24
     warn_days: list[int] = [60, 30, 14, 7, 3, 1]
@@ -113,6 +120,7 @@ class AppConfig(BaseModel):
     repo: RepoConfig
     vault: VaultConfig | None = None
     f5: F5Config | None = None
+    dns: DnsConfig | None = None
     monitor: MonitorConfig | None = None
 
 

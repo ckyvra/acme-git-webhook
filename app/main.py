@@ -264,11 +264,30 @@ def acme_auth(
         # webhook from deadlocking on subsequent requests.
         lock.release()
 
-    return {
+    result = {
         "status": "ok",
         "domain": req.domain,
         "zone_file": f"{_zone_name(req.domain)}{cfg.repo.zone_file_suffix}",
     }
+
+    dns_cfg = cfg.dns
+    if dns_cfg and dns_cfg.wait_for_propagation and req.validation:
+        nameservers = [ns for ns in dns_cfg.nameservers if validate_nameserver(ns)]
+        if not nameservers:
+            nameservers = ["8.8.8.8", "1.1.1.1"]
+        prop_result = check_propagation(
+            req.domain,
+            req.validation,
+            nameservers,
+            timeout=dns_cfg.timeout,
+            poll_interval=dns_cfg.poll_interval,
+        )
+        result["propagation"] = "propagated" if not prop_result["pending"] else "timeout"
+        result["propagation_matched"] = prop_result["matched"]
+        result["propagation_pending"] = prop_result["pending"]
+        result["propagation_elapsed"] = prop_result["elapsed"]
+
+    return result
 
 
 @app.post("/acme/cleanup")
@@ -370,16 +389,21 @@ def acme_wait_for_propagation(
             - ``pending``: list of nameservers that never matched.
             - ``elapsed``: seconds elapsed.
     """
-    nameservers = req.nameservers or ["8.8.8.8", "1.1.1.1"]
+    cfg = _get_config()
+    dns_cfg = cfg.dns
+    default_ns = dns_cfg.nameservers if dns_cfg else ["8.8.8.8", "1.1.1.1"]
+    nameservers = req.nameservers or default_ns
     nameservers = [ns for ns in nameservers if validate_nameserver(ns)]
     if not nameservers:
-        nameservers = ["8.8.8.8", "1.1.1.1"]
+        nameservers = default_ns
+    timeout = req.timeout if req.timeout is not None else (dns_cfg.timeout if dns_cfg else 120)
+    poll_interval = req.poll_interval if req.poll_interval is not None else (dns_cfg.poll_interval if dns_cfg else 5)
     result = check_propagation(
         req.domain,
         req.validation,
         nameservers,
-        timeout=req.timeout,
-        poll_interval=req.poll_interval,
+        timeout=timeout,
+        poll_interval=poll_interval,
     )
     status = "propagated" if not result["pending"] else "timeout"
     return {
