@@ -1,6 +1,7 @@
 site_name: acme-git-webhook
 site_description: ACME DNS-01 webhook that provisions certificates via Git-managed Bind zone files, stores them in Vault, deploys to F5/Ivanti/Exchange, and monitors expiration.
 site_author: Christophe Kyvra
+site_url: https://ckyvra.github.io/acme-git-webhook/
 repo_url: https://github.com/ckyvra/acme-git-webhook
 repo_name: ckyvra/acme-git-webhook
 edit_uri: edit/main/docs/
@@ -35,7 +36,7 @@ plugins:
   - minify:
       minify_html: true
   - i18n:
-      docs_structure: suffix
+      docs_structure: folder
       languages:
         - locale: en
           name: English
