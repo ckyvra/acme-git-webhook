@@ -11,7 +11,23 @@
 
 ## Before creating a PR
 
-1. Run the full test suite:
+1. Run linting:
+   ```bash
+   make lint
+   ```
+   or directly:
+   ```bash
+   ruff check . && ruff format --check .
+   ```
+2. Run type checking:
+   ```bash
+   make typecheck
+   ```
+   or directly:
+   ```bash
+   mypy app/
+   ```
+3. Run the full test suite:
    ```bash
    make test
    ```
@@ -19,11 +35,7 @@
    ```bash
    .venv/bin/python -m pytest -v
    ```
-2. Run linting:
-   ```bash
-   make lint
-   ```
-3. Verify all 260+ tests pass and there are no new warnings.
+4. Verify all 260+ tests pass and there are no new warnings.
 4. Update documentation to reflect the changes:
    - **README.md** — update usage examples, config reference, API endpoints.
    - **`docs/` (MkDocs)** — keep the English (`en/`) and French (`fr/`) documentation in sync with any new features, config fields, or behavioural changes.

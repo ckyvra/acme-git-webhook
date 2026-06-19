@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from app.f5_handler import F5Handler, F5HostHandler, _read_password, _sanitize_name
 from app.config import F5Config, F5HostConfig
+from app.f5_handler import F5Handler, F5HostHandler, _read_password, _sanitize_name
 
 
 class TestSanitizeName:
@@ -143,9 +143,7 @@ class TestF5HostHandler:
 
         handler._upload_cert.assert_called_once_with("example.com", "fullchain")
         handler._upload_key.assert_called_once_with("example.com", "key")
-        handler._update_profile_cert.assert_called_once_with(
-            "example-ssl", "/Common/example.com", "/Common/example.com"
-        )
+        handler._update_profile_cert.assert_called_once_with("example-ssl", "/Common/example.com", "/Common/example.com")
         assert result["host"] == "https://bigip.example.com"
         assert result["updated_profiles"] == ["example-ssl"]
 
@@ -195,12 +193,14 @@ class TestF5Handler:
     def test_deploy_cert_all_hosts_success(self, f5_config):
         handler = F5Handler(f5_config)
         for host in handler._hosts:
-            host.deploy_cert = MagicMock(return_value={
-                "host": host.config.addr,
-                "cert_name": "/Common/example.com",
-                "key_name": "/Common/example.com",
-                "updated_profiles": ["example-ssl"],
-            })
+            host.deploy_cert = MagicMock(
+                return_value={
+                    "host": host.config.addr,
+                    "cert_name": "/Common/example.com",
+                    "key_name": "/Common/example.com",
+                    "updated_profiles": ["example-ssl"],
+                }
+            )
 
         results = handler.deploy_cert("example.com", "cert", "fullchain", "key")
         assert len(results) == 2
@@ -209,11 +209,13 @@ class TestF5Handler:
     def test_deploy_cert_one_host_fails(self, f5_config):
         handler = F5Handler(f5_config)
         handler._hosts[0].deploy_cert = MagicMock(side_effect=Exception("Connection failed"))
-        handler._hosts[1].deploy_cert = MagicMock(return_value={
-            "host": "https://bigip2.example.com",
-            "cert_name": "/Common/example.com",
-            "status": "ok",
-        })
+        handler._hosts[1].deploy_cert = MagicMock(
+            return_value={
+                "host": "https://bigip2.example.com",
+                "cert_name": "/Common/example.com",
+                "status": "ok",
+            }
+        )
 
         results = handler.deploy_cert("example.com", "cert", "fullchain", "key")
         assert len(results) == 2
@@ -256,9 +258,7 @@ class TestF5ApiCalls:
     def test_api_post_raises_on_error(self, handler):
         with patch.object(handler._ensure_client(), "post") as mock_post:
             mock_response = MagicMock()
-            mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-                "error", request=MagicMock(), response=MagicMock()
-            )
+            mock_response.raise_for_status.side_effect = httpx.HTTPStatusError("error", request=MagicMock(), response=MagicMock())
             mock_post.return_value = mock_response
 
             with pytest.raises(httpx.HTTPStatusError):

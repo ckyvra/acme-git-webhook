@@ -264,6 +264,7 @@ class TestStoreCert:
         handler._client = mock_client
 
         import logging
+
         caplog.set_level(logging.INFO)
         handler.store_cert(
             domain="example.com",

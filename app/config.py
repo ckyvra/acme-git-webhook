@@ -1,7 +1,6 @@
 import logging
 import os
-from pathlib import Path
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 import yaml
 from pydantic import BaseModel, Field
@@ -17,6 +16,7 @@ class AuthConfig(BaseModel):
             carrying one of these keys in the Authorization header will
             be allowed to trigger add/remove operations.
     """
+
     api_keys: list[str]
 
 
@@ -32,6 +32,7 @@ class WebhookConfig(BaseModel):
             When set, GitPython is configured to use this key for
             authentication instead of the default SSH agent.
     """
+
     bind: str = "0.0.0.0:8000"
     work_dir: str = "/data/acme-git-webhook"
     ssh_key: str | None = None
@@ -48,6 +49,7 @@ class RepoConfig(BaseModel):
         zone_file_suffix: File extension of Bind zone files
             (default: .zone).
     """
+
     url: str
     branch: str = "main"
     zone_path: str = "."
@@ -76,6 +78,7 @@ class VaultConfig(BaseModel):
             Useful for local development and tests when no Vault
             server is available (default: False).
     """
+
     addr: str
     role_id: str
     secret_id_path: str
@@ -86,6 +89,7 @@ class VaultConfig(BaseModel):
 
 
 class F5HostConfig(BaseModel):
+    name: str | None = None
     addr: str
     username: str
     password_path: str
@@ -108,6 +112,7 @@ class F5TargetConfig(BaseModel):
         verify: Whether to verify the F5 TLS certificate (default: True).
         timeout: HTTP request timeout in seconds (default: 30).
     """
+
     name: str
     provider: Literal["f5"] = "f5"
     addr: str
@@ -131,6 +136,7 @@ class IvantiTargetConfig(BaseModel):
         management_interface: Whether to also bind to the management interface.
         timeout: HTTP request timeout in seconds (default: 60).
     """
+
     name: str
     provider: Literal["ivanti"] = "ivanti"
     addr: str
@@ -157,6 +163,7 @@ class ExchangeTargetConfig(BaseModel):
         services: Exchange services to enable (default: ``"SMTP"``).
         timeout: WinRM operation timeout in seconds (default: 120).
     """
+
     name: str
     provider: Literal["exchange"] = "exchange"
     addr: str
@@ -172,7 +179,7 @@ class ExchangeTargetConfig(BaseModel):
 # Discriminated union so Pydantic selects the correct model based on
 # the value of the ``provider`` field in the YAML configuration.
 TargetConfig = Annotated[
-    Union[F5TargetConfig, IvantiTargetConfig, ExchangeTargetConfig],
+    F5TargetConfig | IvantiTargetConfig | ExchangeTargetConfig,
     Field(discriminator="provider"),
 ]
 
@@ -214,6 +221,7 @@ class AppConfig(BaseModel):
     Groups authentication, webhook server, repository and Vault
     settings into a single validated object loaded from config.yaml.
     """
+
     auth: AuthConfig
     webhook: WebhookConfig
     repo: RepoConfig
@@ -249,8 +257,5 @@ def load_config(path: str | None = None) -> AppConfig:
         data = yaml.safe_load(f)
     cfg = AppConfig.model_validate(data)
     if cfg.vault and not cfg.vault.verify:
-        logger.warning(
-            "Vault TLS verification is DISABLED (verify=False) — "
-            "this is insecure and should only be used for development"
-        )
+        logger.warning("Vault TLS verification is DISABLED (verify=False) — this is insecure and should only be used for development")
     return cfg

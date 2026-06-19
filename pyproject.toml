@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "acme-git-webhook"
+dynamic = ["version"]
+description = "ACME DNS-challenge webhook with multi-target deployment"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+
+[tool.ruff]
+line-length = 200
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B"]
+ignore = [
+    "E501",     # line too long — tests have long string literals
+    "B008",     # Depends() in defaults — standard FastAPI pattern
+    "B027",     # empty method in ABC — some base methods are intentionally empty
+    "B904",     # raise from err — HTTPException handling is fine as-is
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "S101",
+    "PLR2004",
+    "ARG001", "ARG002",
+    "F401", "F811",
+    "S104", "S105", "S106", "S108",
+    "RUF002", "RUF005", "RUF059",
+    "SIM103", "SIM108",
+    "PTH123",
+    "N817",
+]
+"app/main.py" = ["E402"]
+"app/*" = [
+    "ARG001", "ARG002",
+    "S603",
+    "PTH123",
+    "RUF002",
+    "SIM103",
+    "B904",
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+ignore_missing_imports = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

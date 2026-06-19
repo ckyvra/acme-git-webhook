@@ -3,8 +3,8 @@ import time
 
 import dns.exception
 import dns.name
-import dns.resolver
 import dns.rdatatype
+import dns.resolver
 
 
 def validate_nameserver(ip: str) -> bool:

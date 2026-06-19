@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 try:
     import winrm
 except ImportError:
-    winrm = None
+    winrm = None  # type: ignore[assignment]
 
 
 def _read_password(path: str) -> str:
@@ -71,10 +71,7 @@ class ExchangeTarget(DeployTarget):
             remote_file = f"{self._config.remote_path}\\{domain}.pfx"
 
             # Upload PFX via PowerShell base64 decode on the remote side
-            upload_script = (
-                f'$bytes = [Convert]::FromBase64String("{pfx_b64}"); '
-                f'[IO.File]::WriteAllBytes("{remote_file}", $bytes)'
-            )
+            upload_script = f'$bytes = [Convert]::FromBase64String("{pfx_b64}"); [IO.File]::WriteAllBytes("{remote_file}", $bytes)'
             r = session.run_ps(upload_script)
             if r.status_code != 0:
                 raise RuntimeError(f"WinRM upload failed: {r.std_err.decode()}")
@@ -83,20 +80,16 @@ class ExchangeTarget(DeployTarget):
             import_script = (
                 f'$pwd = ConvertTo-SecureString "{password}" -AsPlainText -Force; '
                 f'$cert = Import-ExchangeCertificate -FileName "{remote_file}" '
-                f'-Password $pwd; '
-                f'Enable-ExchangeCertificate -Thumbprint $cert.Thumbprint '
-                f'-Services {self._config.services}'
+                f"-Password $pwd; "
+                f"Enable-ExchangeCertificate -Thumbprint $cert.Thumbprint "
+                f"-Services {self._config.services}"
             )
             r = session.run_ps(import_script)
             if r.status_code != 0:
-                raise RuntimeError(
-                    f"WinRM import/enable failed: {r.std_err.decode()}"
-                )
+                raise RuntimeError(f"WinRM import/enable failed: {r.std_err.decode()}")
 
             # Cleanup remote PFX
-            cleanup_script = (
-                f'Remove-Item -Path "{remote_file}" -Force -ErrorAction SilentlyContinue'
-            )
+            cleanup_script = f'Remove-Item -Path "{remote_file}" -Force -ErrorAction SilentlyContinue'
             session.run_ps(cleanup_script)
 
             logger.info(

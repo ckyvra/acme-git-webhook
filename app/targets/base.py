@@ -34,8 +34,7 @@ class DeployTarget(ABC):
         domain: str,
         fullchain_pem: str,
         privkey_pem: str,
-    ) -> DeployResult:
-        ...
+    ) -> DeployResult: ...
 
     def close(self) -> None:
         """Release any held resources (HTTP clients, etc.)."""

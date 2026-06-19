@@ -16,11 +16,13 @@ from __future__ import annotations
 import json
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import hvac
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+
+from hvac.exceptions import InvalidPath
 
 from app.config import VaultConfig
 
@@ -196,6 +198,7 @@ class VaultHandler:
             RuntimeError: If the SecretID file is empty.
         """
         self._ensure_authenticated()
+        assert self._client is not None
 
         base_path = f"{self.config.kv_mount}/{self.config.certs_path}/{domain}"
 
@@ -205,7 +208,7 @@ class VaultHandler:
         metadata = {
             "domain": domain,
             "issuer": "Let's Encrypt",
-            "stored_at": datetime.now(timezone.utc).isoformat(),
+            "stored_at": datetime.now(UTC).isoformat(),
             "not_before": not_before or "unknown",
             "expiry": expiry or "unknown",
         }
@@ -245,6 +248,7 @@ class VaultHandler:
             hvac.exceptions.VaultError: If the Vault operation fails.
         """
         self._ensure_authenticated()
+        assert self._client is not None
 
         try:
             self._client.secrets.kv.v2.delete_metadata_and_all_versions(
@@ -253,7 +257,7 @@ class VaultHandler:
             )
             logger.info("Certificate for %s deleted from Vault", domain)
             return True
-        except hvac.exceptions.InvalidPath:
+        except InvalidPath:
             # Path did not exist — nothing to delete.
             logger.info("No Vault path found for %s, skipping delete", domain)
             return True

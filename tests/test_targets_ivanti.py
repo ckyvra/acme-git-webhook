@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from app.targets.ivanti import IvantiTarget, _read_api_key
 from app.config import IvantiTargetConfig
+from app.targets.ivanti import IvantiTarget, _read_api_key
 
 
 class TestReadApiKey:
@@ -86,9 +86,7 @@ class TestIvantiTarget:
 
     def test_deploy_api_error(self, target):
         mock_client = MagicMock()
-        mock_client.post.side_effect = httpx.HTTPStatusError(
-            "401 Unauthorized", request=MagicMock(), response=MagicMock()
-        )
+        mock_client.post.side_effect = httpx.HTTPStatusError("401 Unauthorized", request=MagicMock(), response=MagicMock())
         target._client = mock_client
 
         with patch("app.targets.ivanti.pem_to_pfx") as mock_pfx:
@@ -112,9 +110,7 @@ class TestIvantiTarget:
 
 class TestIvantiTargetConfig:
     def test_default_provider(self):
-        cfg = IvantiTargetConfig(
-            name="test", addr="https://example.com", api_key_path="/path/to/key"
-        )
+        cfg = IvantiTargetConfig(name="test", addr="https://example.com", api_key_path="/path/to/key")
         assert cfg.provider == "ivanti"
         assert cfg.timeout == 60
         assert cfg.internal_ports == []

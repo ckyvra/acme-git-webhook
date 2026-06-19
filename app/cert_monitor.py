@@ -4,7 +4,7 @@ import json
 import logging
 import shlex
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -38,11 +38,10 @@ class CertMonitor:
         try:
             self._vault._ensure_authenticated()
             client = self._vault._client
+            assert client is not None
             mount = self._vault.config.kv_mount
             path = self._vault.config.certs_path
-            domains = client.secrets.kv.v2.list_secrets(
-                mount_point=mount, path=path
-            )
+            domains = client.secrets.kv.v2.list_secrets(mount_point=mount, path=path)
         except Exception:
             logger.warning("CertMonitor: no certificates found in Vault", exc_info=True)
             return []
@@ -51,41 +50,38 @@ class CertMonitor:
         for domain_key in domains.get("data", {}).get("keys", []):
             domain = domain_key.rstrip("/")
             try:
-                secret = client.secrets.kv.v2.read_secret_version(
-                    mount_point=mount, path=f"{path}/{domain}"
-                )
+                secret = client.secrets.kv.v2.read_secret_version(mount_point=mount, path=f"{path}/{domain}")
                 data = secret.get("data", {}).get("data", {})
                 metadata_raw = data.get("metadata", "{}")
                 metadata = json.loads(metadata_raw) if isinstance(metadata_raw, str) else metadata_raw
                 expiry_str = metadata.get("expiry")
                 if expiry_str and expiry_str != "unknown":
                     expiry = datetime.fromisoformat(expiry_str)
-                    days_left = (expiry - datetime.now(timezone.utc)).days
+                    days_left = (expiry - datetime.now(UTC)).days
                 else:
                     expiry = None
                     days_left = None
-                certs.append({
-                    "domain": domain,
-                    "expiry": expiry.isoformat() if expiry else None,
-                    "days_left": days_left,
-                    "stored_at": metadata.get("stored_at"),
-                    "metadata": metadata,
-                })
+                certs.append(
+                    {
+                        "domain": domain,
+                        "expiry": expiry.isoformat() if expiry else None,
+                        "days_left": days_left,
+                        "stored_at": metadata.get("stored_at"),
+                        "metadata": metadata,
+                    }
+                )
             except Exception:
                 logger.warning("CertMonitor: failed to read cert for %s", domain, exc_info=True)
         return certs
 
     def _send_webhook_alert(self, domain: str, days_left: int) -> None:
+        assert self.config is not None
         url = self.config.alert_webhook_url
         if not url:
             return
         try:
             payload = {
-                "text": (
-                    f"Certificate expiration warning: {domain}\n"
-                    f"Days left: {days_left}\n"
-                    f"Severity: {'CRITICAL' if days_left <= 7 else 'WARNING' if days_left <= 30 else 'INFO'}"
-                ),
+                "text": (f"Certificate expiration warning: {domain}\nDays left: {days_left}\nSeverity: {'CRITICAL' if days_left <= 7 else 'WARNING' if days_left <= 30 else 'INFO'}"),
                 "domain": domain,
                 "days_left": days_left,
             }
@@ -122,10 +118,13 @@ class CertMonitor:
         except subprocess.CalledProcessError as e:
             logger.error(
                 "CertMonitor: renewal failed for %s (rc=%d): %s",
-                domain, e.returncode, e.stderr.strip(),
+                domain,
+                e.returncode,
+                e.stderr.strip(),
             )
 
     def _should_renew_by_percentage(self, domain: str, days_left: int, metadata: dict | None) -> bool:
+        assert self.config is not None
         pct = self.config.renew_percentage
         if pct is None or metadata is None:
             return False
@@ -157,15 +156,8 @@ class CertMonitor:
                     self._send_webhook_alert(domain, days_left)
                     sent.add(threshold)
 
-        should_renew = (
-            days_left <= self.config.renew_threshold
-            or self._should_renew_by_percentage(domain, days_left, metadata)
-        )
-        if (
-            self.config.renew_command
-            and should_renew
-            and domain not in self._renewing
-        ):
+        should_renew = days_left <= self.config.renew_threshold or self._should_renew_by_percentage(domain, days_left, metadata)
+        if self.config.renew_command and should_renew and domain not in self._renewing:
             self._renewing.add(domain)
             self._run_renew(domain)
 

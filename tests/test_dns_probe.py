@@ -1,10 +1,9 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import dns.exception
 import dns.rdatatype
-import dns.resolver
 import dns.rdtypes.txtbase
-import pytest
+import dns.resolver
 
 from app.dns_probe import _check_single_ns, check_propagation, validate_nameserver
 
@@ -12,7 +11,9 @@ from app.dns_probe import _check_single_ns, check_propagation, validate_nameserv
 def _make_txt_rdata(value: str):
     """Create a minimal TXT-like rdata for testing."""
     return dns.rdtypes.txtbase.TXTBase(
-        dns.rdataclass.IN, dns.rdatatype.TXT, [value.encode()],
+        dns.rdataclass.IN,
+        dns.rdatatype.TXT,
+        [value.encode()],
     )
 
 
@@ -46,8 +47,11 @@ class TestCheckPropagation:
         answer.__iter__.return_value = [_make_txt_rdata("token")]
         with patch.object(dns.resolver.Resolver, "resolve", return_value=answer):
             result = check_propagation(
-                "_acme-challenge.example.com", "token",
-                ["1.1.1.1", "8.8.8.8"], timeout=10, poll_interval=1,
+                "_acme-challenge.example.com",
+                "token",
+                ["1.1.1.1", "8.8.8.8"],
+                timeout=10,
+                poll_interval=1,
             )
         assert result["pending"] == []
         assert len(result["matched"]) == 2
@@ -66,8 +70,11 @@ class TestCheckPropagation:
 
         with patch.object(dns.resolver.Resolver, "resolve", side_effect=_resolve_side):
             result = check_propagation(
-                "_acme-challenge.example.com", "token",
-                ["8.8.8.8"], timeout=10, poll_interval=0,
+                "_acme-challenge.example.com",
+                "token",
+                ["8.8.8.8"],
+                timeout=10,
+                poll_interval=0,
             )
         assert result["pending"] == []
         assert result["matched"] == ["8.8.8.8"]
@@ -75,8 +82,11 @@ class TestCheckPropagation:
     def test_all_pending_timeout(self):
         with patch.object(dns.resolver.Resolver, "resolve", side_effect=dns.exception.DNSException):
             result = check_propagation(
-                "_acme-challenge.example.com", "token",
-                ["1.1.1.1", "8.8.8.8"], timeout=1, poll_interval=1,
+                "_acme-challenge.example.com",
+                "token",
+                ["1.1.1.1", "8.8.8.8"],
+                timeout=1,
+                poll_interval=1,
             )
         assert result["pending"] == ["1.1.1.1", "8.8.8.8"]
         assert result["matched"] == []
@@ -86,10 +96,13 @@ class TestCheckPropagation:
         answer = MagicMock()
         answer.__iter__.return_value = [_make_txt_rdata("x")]
         custom_ns = ["4.4.4.4", "8.8.4.4"]
-        with patch.object(dns.resolver.Resolver, "resolve", return_value=answer) as mock:
+        with patch.object(dns.resolver.Resolver, "resolve", return_value=answer):
             result = check_propagation(
-                "_acme-challenge.example.com", "x",
-                custom_ns, timeout=10, poll_interval=1,
+                "_acme-challenge.example.com",
+                "x",
+                custom_ns,
+                timeout=10,
+                poll_interval=1,
             )
         assert result["matched"] == custom_ns
 
@@ -99,8 +112,11 @@ class TestCheckPropagation:
         answer.__iter__.return_value = [_make_txt_rdata("old-token")]
         with patch.object(dns.resolver.Resolver, "resolve", return_value=answer):
             result = check_propagation(
-                "_acme-challenge.example.com", "expected-token",
-                ["8.8.8.8"], timeout=1, poll_interval=1,
+                "_acme-challenge.example.com",
+                "expected-token",
+                ["8.8.8.8"],
+                timeout=1,
+                poll_interval=1,
             )
         assert result["pending"] == ["8.8.8.8"]
 
@@ -111,8 +127,11 @@ class TestCheckPropagationEdgeCases:
         answer.__iter__.return_value = [_make_txt_rdata("token")]
         with patch.object(dns.resolver.Resolver, "resolve", return_value=answer):
             result = check_propagation(
-                "_acme-challenge.example.com", "token",
-                ["8.8.8.8"], timeout=30, poll_interval=5,
+                "_acme-challenge.example.com",
+                "token",
+                ["8.8.8.8"],
+                timeout=30,
+                poll_interval=5,
             )
         # With immediate match, elapsed should be 0 (first poll succeeds).
         assert result["elapsed"] == 0
