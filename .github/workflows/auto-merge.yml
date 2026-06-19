@@ -106,7 +106,7 @@ jobs:
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     pull_number: pr.number,
-                    merge_method: "squash",
+                    merge_method: "rebase",
                   });
                   results.merged.push(pr.number);
                   core.info(`Auto-merged #${pr.number}: ${pr.title}`);

@@ -5,7 +5,7 @@
 - **Never commit directly to `main`** — all work must be done on a dedicated feature branch.
 - Feature branches should follow the naming convention: `feat/<short-description>`, `fix/<short-description>`, `docs/<short-description>`.
 - Create a Pull Request from the feature branch to `main` for every change.
-- An automated workflow merges PRs labelled `auto-merge` when all checks pass and a review is approved.
+- An automated workflow merges PRs labelled `auto-merge` when all checks pass and a review is approved. The merge method is **rebase** (not squash) to preserve individual commits.
 - PRs labelled `hold` will never be merged automatically.
 - PRs ready to merge without the `auto-merge` label trigger a notification to the maintainer.
 
