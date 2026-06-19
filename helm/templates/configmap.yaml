@@ -57,6 +57,10 @@ data:
       warn_days: {{ toYaml .Values.monitor.warnDays | nindent 6 }}
       {{- if .Values.monitor.alertWebhookUrl }}
       alert_webhook_url: {{ .Values.monitor.alertWebhookUrl | quote }}
+      {{- if .Values.monitor.alertWebhookHeaders }}
+      alert_webhook_headers:
+        {{- toYaml .Values.monitor.alertWebhookHeaders | nindent 4 }}
+      {{- end }}
       {{- else }}
       alert_webhook_url: null
       {{- end }}
@@ -64,4 +68,15 @@ data:
         {{- .Values.monitor.renewCommand | nindent 8 }}
       renew_timeout: {{ .Values.monitor.renewTimeout }}
       renew_threshold: {{ .Values.monitor.renewThreshold }}
+      {{- if .Values.monitor.renewPercentage }}
+      renew_percentage: {{ .Values.monitor.renewPercentage }}
+      {{- end }}
+    {{- end }}
+
+    {{- if .Values.openssl.enabled }}
+    openssl:
+      key_algorithm: {{ .Values.openssl.keyAlgorithm }}
+      rsa_key_size: {{ .Values.openssl.rsaKeySize }}
+      ecdsa_curve: {{ .Values.openssl.ecdsaCurve }}
+      signature_hash: {{ .Values.openssl.signatureHash }}
     {{- end }}
