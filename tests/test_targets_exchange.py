@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.targets.exchange import ExchangeTarget, _read_password
 from app.config import ExchangeTargetConfig
+from app.targets.exchange import ExchangeTarget, _read_password
 
 
 class TestReadPassword:

@@ -166,11 +166,13 @@ class F5Handler:
                 results.append(result)
             except Exception as e:
                 logger.error("F5: deployment failed for %s: %s", host.config.addr, e)
-                results.append({
-                    "host": host.config.addr,
-                    "status": "error",
-                    "error": str(e),
-                })
+                results.append(
+                    {
+                        "host": host.config.addr,
+                        "status": "error",
+                        "error": str(e),
+                    }
+                )
         return results
 
     def close(self) -> None:

@@ -4,8 +4,8 @@ import dns.name
 import dns.rdataclass
 import dns.rdataset
 import dns.rdatatype
-from dns.rdtypes.txtbase import TXTBase
 import dns.zone
+from dns.rdtypes.txtbase import TXTBase
 
 
 def _origin_from_zone_file(zone_file: Path) -> dns.name.Name:
@@ -110,9 +110,7 @@ def add_txt_record(
     """
     zone_file = _resolve_zone_path(repos_path, domain, zone_path, suffix)
     if zone_file is None:
-        raise FileNotFoundError(
-            f"No zone file found for domain '{domain}' in {repos_path / zone_path}"
-        )
+        raise FileNotFoundError(f"No zone file found for domain '{domain}' in {repos_path / zone_path}")
 
     origin = _origin_from_zone_file(zone_file)
     zone = dns.zone.from_file(str(zone_file), origin=origin)

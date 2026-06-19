@@ -4,7 +4,7 @@ from textwrap import dedent
 import pytest
 from git import Repo
 
-from app.config import AuthConfig, RepoConfig, WebhookConfig, AppConfig
+from app.config import AppConfig, AuthConfig, RepoConfig, WebhookConfig
 
 
 @pytest.fixture
@@ -39,7 +39,7 @@ def app_config(tmp_path: Path) -> AppConfig:
 def bare_git_repo(tmp_path: Path) -> Path:
     bare = tmp_path / "remote.git"
     bare.mkdir(parents=True, exist_ok=True)
-    repo = Repo.init(str(bare), bare=True, initial_branch="main")
+    Repo.init(str(bare), bare=True, initial_branch="main")
 
     clone_dir = tmp_path / "initial-clone"
     clone = Repo.clone_from(str(bare), str(clone_dir))

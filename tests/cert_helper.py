@@ -15,7 +15,7 @@ def generate_self_signed_cert(domain: str = "example.com") -> tuple[str, str]:
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
     subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, domain)])
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
 
     cert = (
         x509.CertificateBuilder()

@@ -76,9 +76,7 @@ class IvantiTarget(DeployTarget):
                 json=payload,
             )
             r.raise_for_status()
-            logger.info(
-                "Ivanti: deployed cert for %s to %s", domain, self._config.addr
-            )
+            logger.info("Ivanti: deployed cert for %s to %s", domain, self._config.addr)
             return DeployResult(
                 target=self.name,
                 provider=self.provider_type,

@@ -1,8 +1,6 @@
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from app.cert_monitor import CertMonitor
 from app.config import MonitorConfig, OpensslConfig
@@ -10,7 +8,7 @@ from app.vault_handler import _extract_not_before
 
 
 def _expiry_iso(days_ahead: int = 30) -> str:
-    return (datetime.now(timezone.utc) + timedelta(days=days_ahead, hours=1)).isoformat()
+    return (datetime.now(UTC) + timedelta(days=days_ahead, hours=1)).isoformat()
 
 
 class TestCertMonitorInit:
@@ -49,28 +47,10 @@ class TestCertMonitorLoadCerts:
     def test_loads_valid_certificates(self):
         vault = MagicMock()
         expiry1 = _expiry_iso(30)
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/", "other.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/", "other.com/"]}}
         vault._client.secrets.kv.v2.read_secret_version.side_effect = [
-            {
-                "data": {
-                    "data": {
-                        "metadata": (
-                            '{"domain": "example.com", "expiry": "' + expiry1 + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
-                        )
-                    }
-                }
-            },
-            {
-                "data": {
-                    "data": {
-                        "metadata": (
-                            '{"domain": "other.com", "expiry": "unknown", "stored_at": "2025-01-01T00:00:00+00:00"}'
-                        )
-                    }
-                }
-            },
+            {"data": {"data": {"metadata": ('{"domain": "example.com", "expiry": "' + expiry1 + '", "stored_at": "2025-01-01T00:00:00+00:00"}')}}},
+            {"data": {"data": {"metadata": ('{"domain": "other.com", "expiry": "unknown", "stored_at": "2025-01-01T00:00:00+00:00"}')}}},
         ]
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
@@ -85,19 +65,9 @@ class TestCertMonitorLoadCerts:
 
     def test_read_cert_error_skips_domain(self):
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/", "bad.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/", "bad.com/"]}}
         vault._client.secrets.kv.v2.read_secret_version.side_effect = [
-            {
-                "data": {
-                    "data": {
-                        "metadata": (
-                            '{"domain": "example.com", "expiry": "' + _expiry_iso(60) + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
-                        )
-                    }
-                }
-            },
+            {"data": {"data": {"metadata": ('{"domain": "example.com", "expiry": "' + _expiry_iso(60) + '", "stored_at": "2025-01-01T00:00:00+00:00"}')}}},
             Exception("Read error"),
         ]
         vault.config.kv_mount = "secret"
@@ -108,7 +78,6 @@ class TestCertMonitorLoadCerts:
         assert len(certs) == 1
         assert certs[0]["domain"] == "example.com"
 
-
     def test_check_day_threshold_returns_when_no_config(self):
         monitor = CertMonitor(None, None)
         monitor._check_day_threshold("example.com", 10)
@@ -118,17 +87,9 @@ class TestCertMonitorThreshold:
     def test_warning_logged_at_threshold(self, caplog):
         config = MonitorConfig(warn_days=[30, 14, 7], alert_webhook_url=None)
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/"]}}
         vault._client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {
-                "data": {
-                    "metadata": (
-                        '{"domain": "example.com", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
-                    )
-                }
-            }
+            "data": {"data": {"metadata": ('{"domain": "example.com", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}')}}
         }
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
@@ -144,17 +105,9 @@ class TestCertMonitorThreshold:
     def test_no_duplicate_warnings(self, caplog):
         config = MonitorConfig(warn_days=[30], alert_webhook_url=None)
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/"]}}
         vault._client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {
-                "data": {
-                    "metadata": (
-                        '{"domain": "example.com", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
-                    )
-                }
-            }
+            "data": {"data": {"metadata": ('{"domain": "example.com", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}')}}
         }
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
@@ -174,17 +127,9 @@ class TestCertMonitorThreshold:
         )
         vault = MagicMock()
         expiry = _expiry_iso(20)
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/"]}}
         vault._client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {
-                "data": {
-                    "metadata": (
-                        '{"domain": "example.com", "expiry": "' + expiry + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
-                    )
-                }
-            }
+            "data": {"data": {"metadata": ('{"domain": "example.com", "expiry": "' + expiry + '", "stored_at": "2025-01-01T00:00:00+00:00"}')}}
         }
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
@@ -205,17 +150,9 @@ class TestCertMonitorThreshold:
             alert_webhook_url="https://hooks.example.com/alert",
         )
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/"]}}
         vault._client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {
-                "data": {
-                    "metadata": (
-                        '{"domain": "example.com", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
-                    )
-                }
-            }
+            "data": {"data": {"metadata": ('{"domain": "example.com", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}')}}
         }
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
@@ -230,17 +167,9 @@ class TestCertMonitorThreshold:
 class TestCertMonitorRunCheck:
     def test_run_check_updates_latest_status(self):
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/"]}}
         vault._client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {
-                "data": {
-                    "metadata": (
-                        '{"domain": "example.com", "expiry": "' + _expiry_iso(60) + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
-                    )
-                }
-            }
+            "data": {"data": {"metadata": ('{"domain": "example.com", "expiry": "' + _expiry_iso(60) + '", "stored_at": "2025-01-01T00:00:00+00:00"}')}}
         }
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
@@ -257,9 +186,7 @@ class TestCertMonitorRunCheck:
 
     def test_get_status_returns_latest(self):
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": []}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": []}}
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
 
@@ -276,9 +203,7 @@ class TestCertMonitorStartStop:
 
     def test_start_creates_scheduler_and_runs_check(self):
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": []}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": []}}
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
 
@@ -290,9 +215,7 @@ class TestCertMonitorStartStop:
 
     def test_stop_shuts_down_scheduler(self):
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": []}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": []}}
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
 
@@ -308,9 +231,7 @@ class TestCertMonitorStartStop:
 
     def test_start_logs_message(self, caplog):
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": []}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": []}}
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
 
@@ -359,19 +280,9 @@ class TestCertMonitorRenew:
             warn_days=[60],
         )
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/"]}}
         vault._client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {
-                "data": {
-                    "metadata": (
-                        '{"domain": "example.com", "expiry": "'
-                        + _expiry_iso(20)
-                        + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
-                    )
-                }
-            }
+            "data": {"data": {"metadata": ('{"domain": "example.com", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}')}}
         }
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
@@ -389,19 +300,9 @@ class TestCertMonitorRenew:
             warn_days=[60],
         )
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/"]}}
         vault._client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {
-                "data": {
-                    "metadata": (
-                        '{"domain": "example.com", "expiry": "'
-                        + _expiry_iso(20)
-                        + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
-                    )
-                }
-            }
+            "data": {"data": {"metadata": ('{"domain": "example.com", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}')}}
         }
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
@@ -458,9 +359,7 @@ class TestCertMonitorOpensslTemplateVars:
             assert "--key-type rsa" in " ".join(cmd)
 
     def test_all_variables_substituted(self):
-        config = MonitorConfig(
-            renew_command="certbot --key-type {key_type} --rsa-key-size {key_size} --elliptic-curve {curve} -{sig_hash}"
-        )
+        config = MonitorConfig(renew_command="certbot --key-type {key_type} --rsa-key-size {key_size} --elliptic-curve {curve} -{sig_hash}")
         openssl = OpensslConfig(
             key_algorithm="ecdsa",
             rsa_key_size=2048,
@@ -480,7 +379,8 @@ class TestCertMonitorOpensslTemplateVars:
 class TestCertMonitorRenewPercentage:
     def _make_metadata(self, days_ago: int, total_days: int) -> dict:
         from datetime import timedelta
-        now = datetime.now(timezone.utc)
+
+        now = datetime.now(UTC)
         not_before = (now - timedelta(days=total_days - days_ago)).isoformat()
         expiry = (now + timedelta(days=days_ago)).isoformat()
         return {"not_before": not_before, "expiry": expiry}
@@ -493,13 +393,9 @@ class TestCertMonitorRenewPercentage:
             warn_days=[],
         )
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/"]}}
         metadata = self._make_metadata(days_ago=10, total_days=100)
-        vault._client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {"data": {"metadata": json.dumps(metadata)}}
-        }
+        vault._client.secrets.kv.v2.read_secret_version.return_value = {"data": {"data": {"metadata": json.dumps(metadata)}}}
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
 
@@ -516,13 +412,9 @@ class TestCertMonitorRenewPercentage:
             warn_days=[],
         )
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/"]}}
         metadata = self._make_metadata(days_ago=20, total_days=100)
-        vault._client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {"data": {"metadata": json.dumps(metadata)}}
-        }
+        vault._client.secrets.kv.v2.read_secret_version.return_value = {"data": {"data": {"metadata": json.dumps(metadata)}}}
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
 
@@ -539,15 +431,9 @@ class TestCertMonitorRenewPercentage:
             warn_days=[],
         )
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/"]}}
         vault._client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {
-                "data": {
-                    "metadata": '{"domain": "example.com", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
-                }
-            }
+            "data": {"data": {"metadata": '{"domain": "example.com", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}'}}
         }
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
@@ -565,15 +451,9 @@ class TestCertMonitorRenewPercentage:
             warn_days=[],
         )
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/"]}}
         vault._client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {
-                "data": {
-                    "metadata": '{"domain": "example.com", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
-                }
-            }
+            "data": {"data": {"metadata": '{"domain": "example.com", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}'}}
         }
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
@@ -591,13 +471,9 @@ class TestCertMonitorRenewPercentage:
             warn_days=[],
         )
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/"]}}
         metadata = self._make_metadata(days_ago=10, total_days=100)
-        vault._client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {"data": {"metadata": json.dumps(metadata)}}
-        }
+        vault._client.secrets.kv.v2.read_secret_version.return_value = {"data": {"data": {"metadata": json.dumps(metadata)}}}
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"
 
@@ -614,15 +490,9 @@ class TestCertMonitorRenewPercentage:
             warn_days=[],
         )
         vault = MagicMock()
-        vault._client.secrets.kv.v2.list_secrets.return_value = {
-            "data": {"keys": ["example.com/"]}
-        }
+        vault._client.secrets.kv.v2.list_secrets.return_value = {"data": {"keys": ["example.com/"]}}
         vault._client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {
-                "data": {
-                    "metadata": '{"domain": "example.com", "not_before": "unknown", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
-                }
-            }
+            "data": {"data": {"metadata": '{"domain": "example.com", "not_before": "unknown", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}'}}
         }
         vault.config.kv_mount = "secret"
         vault.config.certs_path = "certs"

@@ -1,17 +1,17 @@
-import yaml
 import pytest
+import yaml
 from pydantic import ValidationError
 
 from app.config import (
-    load_config,
     AppConfig,
     AuthConfig,
-    WebhookConfig,
-    RepoConfig,
-    VaultConfig,
+    MonitorConfig,
     OpensslConfig,
     PostQuantumConfig,
-    MonitorConfig,
+    RepoConfig,
+    VaultConfig,
+    WebhookConfig,
+    load_config,
 )
 
 
@@ -74,11 +74,13 @@ class TestLoadConfig:
     def test_load_valid(self, tmp_path):
         path = tmp_path / "config.yaml"
         path.write_text(
-            yaml.dump({
-                "auth": {"api_keys": ["sk-test"]},
-                "webhook": {"bind": "0.0.0.0:8000", "work_dir": "/data/foo"},
-                "repo": {"url": "git@github.com:org/dns-zones.git"},
-            })
+            yaml.dump(
+                {
+                    "auth": {"api_keys": ["sk-test"]},
+                    "webhook": {"bind": "0.0.0.0:8000", "work_dir": "/data/foo"},
+                    "repo": {"url": "git@github.com:org/dns-zones.git"},
+                }
+            )
         )
         cfg = load_config(str(path))
         assert cfg.auth.api_keys == ["sk-test"]
@@ -103,16 +105,18 @@ class TestLoadConfig:
     def test_with_vault_section(self, tmp_path):
         path = tmp_path / "config.yaml"
         path.write_text(
-            yaml.dump({
-                "auth": {"api_keys": ["sk-test"]},
-                "webhook": {"bind": "0.0.0.0:8000", "work_dir": "/data/foo"},
-                "repo": {"url": "git@github.com:org/dns-zones.git"},
-                "vault": {
-                    "addr": "https://vault.example.com:8200",
-                    "role_id": "role-abc",
-                    "secret_id_path": "/run/secrets/vault_secret_id",
-                },
-            })
+            yaml.dump(
+                {
+                    "auth": {"api_keys": ["sk-test"]},
+                    "webhook": {"bind": "0.0.0.0:8000", "work_dir": "/data/foo"},
+                    "repo": {"url": "git@github.com:org/dns-zones.git"},
+                    "vault": {
+                        "addr": "https://vault.example.com:8200",
+                        "role_id": "role-abc",
+                        "secret_id_path": "/run/secrets/vault_secret_id",
+                    },
+                }
+            )
         )
         cfg = load_config(str(path))
         assert cfg.vault is not None
@@ -123,11 +127,13 @@ class TestLoadConfig:
     def test_without_vault_section(self, tmp_path):
         path = tmp_path / "config.yaml"
         path.write_text(
-            yaml.dump({
-                "auth": {"api_keys": ["sk-test"]},
-                "webhook": {"bind": "0.0.0.0:8000", "work_dir": "/data/foo"},
-                "repo": {"url": "git@github.com:org/dns-zones.git"},
-            })
+            yaml.dump(
+                {
+                    "auth": {"api_keys": ["sk-test"]},
+                    "webhook": {"bind": "0.0.0.0:8000", "work_dir": "/data/foo"},
+                    "repo": {"url": "git@github.com:org/dns-zones.git"},
+                }
+            )
         )
         cfg = load_config(str(path))
         assert cfg.vault is None
@@ -135,11 +141,13 @@ class TestLoadConfig:
     def test_load_with_default_path(self, tmp_path, monkeypatch):
         config_path = tmp_path / "config.yaml"
         config_path.write_text(
-            yaml.dump({
-                "auth": {"api_keys": ["sk-test"]},
-                "webhook": {"bind": "0.0.0.0:8000", "work_dir": "/data/foo"},
-                "repo": {"url": "git@github.com:org/dns-zones.git"},
-            })
+            yaml.dump(
+                {
+                    "auth": {"api_keys": ["sk-test"]},
+                    "webhook": {"bind": "0.0.0.0:8000", "work_dir": "/data/foo"},
+                    "repo": {"url": "git@github.com:org/dns-zones.git"},
+                }
+            )
         )
         monkeypatch.chdir(tmp_path)
         cfg = load_config()
@@ -147,20 +155,23 @@ class TestLoadConfig:
 
     def test_load_vault_with_verify_false_warns(self, tmp_path, caplog):
         import logging
+
         caplog.set_level(logging.WARNING)
         path = tmp_path / "config.yaml"
         path.write_text(
-            yaml.dump({
-                "auth": {"api_keys": ["sk-test"]},
-                "webhook": {"bind": "0.0.0.0:8000", "work_dir": "/data/foo"},
-                "repo": {"url": "git@github.com:org/dns-zones.git"},
-                "vault": {
-                    "addr": "https://vault.example.com:8200",
-                    "role_id": "role-abc",
-                    "secret_id_path": "/run/secrets/vault_secret_id",
-                    "verify": False,
-                },
-            })
+            yaml.dump(
+                {
+                    "auth": {"api_keys": ["sk-test"]},
+                    "webhook": {"bind": "0.0.0.0:8000", "work_dir": "/data/foo"},
+                    "repo": {"url": "git@github.com:org/dns-zones.git"},
+                    "vault": {
+                        "addr": "https://vault.example.com:8200",
+                        "role_id": "role-abc",
+                        "secret_id_path": "/run/secrets/vault_secret_id",
+                        "verify": False,
+                    },
+                }
+            )
         )
         cfg = load_config(str(path))
         assert cfg.vault.verify is False
@@ -280,16 +291,18 @@ class TestAppConfigWithOpenssl:
     def test_load_yaml_with_openssl(self, tmp_path):
         path = tmp_path / "config.yaml"
         path.write_text(
-            yaml.dump({
-                "auth": {"api_keys": ["sk-test"]},
-                "webhook": {"bind": "0.0.0.0:8000", "work_dir": "/data/foo"},
-                "repo": {"url": "git@github.com:org/dns-zones.git"},
-                "openssl": {
-                    "key_algorithm": "ecdsa",
-                    "ecdsa_curve": "secp521r1",
-                    "signature_hash": "sha512",
-                },
-            })
+            yaml.dump(
+                {
+                    "auth": {"api_keys": ["sk-test"]},
+                    "webhook": {"bind": "0.0.0.0:8000", "work_dir": "/data/foo"},
+                    "repo": {"url": "git@github.com:org/dns-zones.git"},
+                    "openssl": {
+                        "key_algorithm": "ecdsa",
+                        "ecdsa_curve": "secp521r1",
+                        "signature_hash": "sha512",
+                    },
+                }
+            )
         )
         cfg = load_config(str(path))
         assert cfg.openssl is not None

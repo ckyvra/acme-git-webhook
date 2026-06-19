@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from app.targets.f5 import F5Target, read_password, sanitize_name
 from app.config import F5TargetConfig
+from app.targets.f5 import F5Target, read_password, sanitize_name
 
 
 class TestSanitizeName:
@@ -64,9 +64,7 @@ class TestF5ApiCallsDirect:
 
         result = target._api_post("sys/file/ssl-cert", {"name": "test"})
 
-        mock_client.post.assert_called_once_with(
-            "/mgmt/tm/sys/file/ssl-cert", json={"name": "test"}
-        )
+        mock_client.post.assert_called_once_with("/mgmt/tm/sys/file/ssl-cert", json={"name": "test"})
         assert result == {"result": "ok"}
 
     def test_api_put_calls_client_put(self, target):
@@ -78,9 +76,7 @@ class TestF5ApiCallsDirect:
 
         result = target._api_put("ltm/profile/client-ssl/Common/test", {"cert": "/Common/x"})
 
-        mock_client.put.assert_called_once_with(
-            "/mgmt/tm/ltm/profile/client-ssl/Common/test", json={"cert": "/Common/x"}
-        )
+        mock_client.put.assert_called_once_with("/mgmt/tm/ltm/profile/client-ssl/Common/test", json={"cert": "/Common/x"})
         assert result == {"result": "ok"}
 
     def test_api_get_calls_client_get(self, target):
@@ -92,17 +88,13 @@ class TestF5ApiCallsDirect:
 
         result = target._api_get("ltm/profile/client-ssl?$select=name")
 
-        mock_client.get.assert_called_once_with(
-            "/mgmt/tm/ltm/profile/client-ssl?$select=name"
-        )
+        mock_client.get.assert_called_once_with("/mgmt/tm/ltm/profile/client-ssl?$select=name")
         assert result == {"items": []}
 
     def test_api_post_raises_on_http_error(self, target):
         mock_client = MagicMock()
         mock_resp = MagicMock()
-        mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "404", request=MagicMock(), response=MagicMock()
-        )
+        mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError("404", request=MagicMock(), response=MagicMock())
         mock_client.post.return_value = mock_resp
         target._client = mock_client
 
@@ -215,9 +207,7 @@ class TestF5Target:
 
         target._upload_cert.assert_called_once_with("example.com", "fullchain")
         target._upload_key.assert_called_once_with("example.com", "key")
-        target._update_profile_cert.assert_called_once_with(
-            "example-ssl", "/Common/example.com", "/Common/example.com"
-        )
+        target._update_profile_cert.assert_called_once_with("example-ssl", "/Common/example.com", "/Common/example.com")
         assert result.status == "ok"
         assert result.target == "f5-paris"
         assert result.details["host"] == "https://bigip.example.com"

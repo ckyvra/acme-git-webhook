@@ -3,7 +3,6 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -19,9 +18,9 @@ from app.auth import verify_api_key
 from app.cert_monitor import CertMonitor
 from app.config import AppConfig, F5TargetConfig, load_config
 from app.dns_probe import check_propagation, validate_nameserver
-from app.targets.manager import DeployManager
 from app.git_handler import clone_or_pull, commit_and_push
 from app.models import AcmeRequest, CertDeployRequest, DeployRequest, PropagationRequest, RenewRequest
+from app.targets.manager import DeployManager
 from app.vault_handler import VaultHandler
 from app.zone_handler import add_txt_record, remove_txt_record
 
@@ -41,7 +40,7 @@ security = HTTPBearer()
 limiter = Limiter(key_func=get_remote_address, default_limits=["30/minute"])
 
 
-def _rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+def _rate_limit_exceeded_handler(request: Request, exc: Exception):
     """Return a 429 JSON response when the rate limit is exceeded."""
     return JSONResponse(
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -295,7 +294,7 @@ def acme_auth(
         add_txt_record(
             repo_root,
             req.domain,
-            req.validation,
+            req.validation or "",
             cfg.repo.zone_path,
             cfg.repo.zone_file_suffix,
         )
@@ -544,12 +543,7 @@ def list_targets(
     mgr = deploy_manager
     if mgr is None:
         return {"targets": []}
-    return {
-        "targets": [
-            {"name": name, "provider": t.provider_type}
-            for name, t in mgr.targets.items()
-        ]
-    }
+    return {"targets": [{"name": name, "provider": t.provider_type} for name, t in mgr.targets.items()]}
 
 
 @app.post("/deploy/{domain}")
@@ -586,6 +580,11 @@ def deploy_cert_to_targets(
                 detail="Vault handler not available, provide PEMs explicitly",
             )
         try:
+            if handler._client is None:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Vault client not initialized",
+                )
             secret = handler._client.secrets.kv.v2.read_secret_version(
                 mount_point=handler.config.kv_mount,
                 path=f"{handler.config.certs_path}/{domain}",

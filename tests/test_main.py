@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import dns.exception
 import dns.rdataclass
@@ -9,15 +9,17 @@ import pytest
 from fastapi.testclient import TestClient
 from git import Repo
 
-from app.config import AppConfig, AuthConfig, DnsConfig, F5Config, F5HostConfig, MonitorConfig, RepoConfig, VaultConfig, WebhookConfig
+from app.config import AppConfig, AuthConfig, DnsConfig, MonitorConfig, RepoConfig, VaultConfig, WebhookConfig
+from app.main import app
 from app.targets.base import DeployResult
 from app.targets.manager import DeployManager
-from app.main import app, config as global_config, vault_handler as global_vault
 
 
 def _make_txt_rdata(value: str):
     return dns.rdtypes.txtbase.TXTBase(
-        dns.rdataclass.IN, dns.rdatatype.TXT, [value.encode()],
+        dns.rdataclass.IN,
+        dns.rdatatype.TXT,
+        [value.encode()],
     )
 
 
@@ -34,6 +36,7 @@ def _setup_config(tmp_path: Path, bare_git_repo: Path):
         ),
     )
     import app.main as m
+
     m.config = global_config
     yield
     m.config = None
@@ -69,6 +72,7 @@ class TestAcmeAuth:
 
     def test_auth_fallback_nameservers_with_dns_config(self, client: TestClient, tmp_path: Path, bare_git_repo: Path):
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -122,9 +126,7 @@ class TestAcmeAuth:
         resp = client.post("/acme/auth", json=payload)
         assert resp.status_code == 401
 
-    def test_auth_creates_txt_in_zone_file(
-        self, client: TestClient, tmp_path: Path, bare_git_repo: Path
-    ):
+    def test_auth_creates_txt_in_zone_file(self, client: TestClient, tmp_path: Path, bare_git_repo: Path):
         payload = {
             "domain": "_acme-challenge.example.com",
             "validation": "txt123",
@@ -137,7 +139,7 @@ class TestAcmeAuth:
         assert resp.status_code == 200
 
         clone_dir = tmp_path / "verify-clone"
-        verify_repo = Repo.clone_from(str(bare_git_repo), str(clone_dir))
+        Repo.clone_from(str(bare_git_repo), str(clone_dir))
         zone_content = (clone_dir / "zones" / "example.com.zone").read_text()
         assert "txt123" in zone_content
 
@@ -340,6 +342,7 @@ class TestAcmeDeploy:
         secret_id_file.write_text("test-secret-id")
 
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -389,6 +392,7 @@ class TestAcmeDeploy:
         secret_id_file.write_text("test-secret-id")
 
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -470,6 +474,7 @@ class TestAcmeDeployEdgeCases:
         secret_id_file.write_text("test-secret-id")
 
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -511,8 +516,6 @@ class TestAcmeHealth:
             assert resp.status_code == 200
 
 
-
-
 class TestCertsStatus:
     def test_status_not_configured(self, client: TestClient):
         resp = client.get(
@@ -524,6 +527,7 @@ class TestCertsStatus:
 
     def test_status_with_monitor(self, client: TestClient, tmp_path: Path):
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -562,6 +566,7 @@ class TestCertsStatus:
 class TestAcmeAuthWithDnsConfig:
     def test_auth_with_auto_propagation(self, client: TestClient, tmp_path: Path, bare_git_repo: Path):
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -606,6 +611,7 @@ class TestAcmeAuthWithDnsConfig:
 
     def test_auth_with_auto_propagation_timeout(self, client: TestClient, tmp_path: Path, bare_git_repo: Path):
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -646,6 +652,7 @@ class TestAcmeAuthWithDnsConfig:
 
     def test_auth_without_validation_no_propagation(self, client: TestClient, tmp_path: Path, bare_git_repo: Path):
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -679,6 +686,7 @@ class TestAcmeAuthWithDnsConfig:
 class TestAcmeDeployWithF5:
     def test_deploy_with_f5_success(self, client: TestClient, tmp_path: Path):
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -724,6 +732,7 @@ class TestAcmeDeployWithF5:
 
     def test_deploy_with_f5_error(self, client: TestClient, tmp_path: Path):
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -766,6 +775,7 @@ class TestAcmeDeployWithF5:
         secret_id_file.write_text("test-secret-id")
 
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -806,6 +816,7 @@ class TestAcmeDeployWithF5:
 class TestAcmeWaitForPropagationWithConfig:
     def test_uses_dns_config_defaults(self, client: TestClient, tmp_path: Path):
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -847,6 +858,7 @@ class TestAcmeWaitForPropagationWithConfig:
 
     def test_request_overrides_config(self, client: TestClient, tmp_path: Path):
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -889,6 +901,7 @@ class TestAcmeWaitForPropagationWithConfig:
 class TestAcmeRenew:
     def test_renew_success(self, client: TestClient, tmp_path: Path):
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -914,6 +927,7 @@ class TestAcmeRenew:
 
     def test_renew_not_configured(self, client: TestClient, tmp_path: Path):
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -937,6 +951,7 @@ class TestAcmeRenew:
 
     def test_renew_monitor_none(self, client: TestClient, tmp_path: Path):
         import app.main as m
+
         m.config = AppConfig(
             auth=AuthConfig(api_keys=["test-key"]),
             webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
@@ -984,6 +999,7 @@ class TestAcmeRenew:
 class TestConfigNotLoaded:
     def test_config_not_loaded_returns_500(self, client: TestClient):
         import app.main as m
+
         m.config = None
         resp = client.post(
             "/acme/auth",
@@ -1003,6 +1019,7 @@ class TestAcmeWebhookApiKey:
             repo=RepoConfig(url="fake", branch="main", zone_path="zones"),
         )
         import app.main as m
+
         m.cert_monitor = None
         with patch("app.main.load_config", return_value=test_config):
             with TestClient(app) as client:
@@ -1020,6 +1037,7 @@ class TestAcmeWebhookApiKey:
             repo=RepoConfig(url="fake", branch="main", zone_path="zones"),
         )
         import app.main as m
+
         m.cert_monitor = None
         with patch("app.main.load_config", return_value=test_config):
             with TestClient(app) as client:
@@ -1038,7 +1056,8 @@ class TestAcmeWebhookApiKey:
         )
         test_config.auth = None
         import app.main as m
+
         m.cert_monitor = None
         with patch("app.main.load_config", return_value=test_config):
-            with TestClient(app) as client:
+            with TestClient(app):
                 assert m.config.auth is None

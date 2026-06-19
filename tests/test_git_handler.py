@@ -26,7 +26,7 @@ class TestCloneOrPull:
 class TestCommitAndPush:
     def test_commit_and_push(self, tmp_path: Path, bare_git_repo: Path):
         work_dir = tmp_path / "work"
-        repo = clone_or_pull(work_dir, str(bare_git_repo), "main")
+        clone_or_pull(work_dir, str(bare_git_repo), "main")
 
         zone_file = work_dir / "zone-repo" / "zones" / "example.com.zone"
         zone_file.write_text(zone_file.read_text() + "\nwww IN A 192.0.2.2\n")
