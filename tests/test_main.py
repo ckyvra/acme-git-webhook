@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from git import Repo
 
-from app.config import AppConfig, AuthConfig, DnsConfig, F5Config, F5HostConfig, F5TargetConfig, MonitorConfig, RepoConfig, VaultConfig, WebhookConfig
+from app.config import AppConfig, AuthConfig, DnsConfig, F5TargetConfig, MonitorConfig, RepoConfig, VaultConfig, WebhookConfig
 from app.main import app
 from app.targets.base import DeployResult
 from app.targets.manager import DeployManager
@@ -1175,15 +1175,6 @@ class TestLifespan:
                     password_path=str(pwd_file),
                 )
             ],
-            f5=F5Config(
-                hosts=[
-                    F5HostConfig(
-                        addr="https://f5.example.com",
-                        username="admin",
-                        password_path=str(pwd_file),
-                    )
-                ]
-            ),
             monitor=MonitorConfig(renew_command="echo renew"),
         )
 

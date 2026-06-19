@@ -40,14 +40,15 @@ data:
     {{- end }}
 
     {{- if .Values.f5.enabled }}
-    f5:
-      hosts:
-        {{- range .Values.f5.hosts }}
-        - addr: {{ .addr | quote }}
-          username: {{ .username | quote }}
-          password_path: "/run/secrets/f5_password"
-          verify: {{ .verify }}
-        {{- end }}
+    targets:
+      {{- range .Values.f5.hosts }}
+      - provider: f5
+        addr: {{ .addr | quote }}
+        username: {{ .username | quote }}
+        password_path: "/run/secrets/f5_password"
+        verify: {{ .verify }}
+        timeout: 30
+      {{- end }}
     {{- end }}
 
     {{- if .Values.monitor.enabled }}

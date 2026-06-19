@@ -47,16 +47,16 @@ vault:
   verify: true                # TLS certificate verification
   skip: false                 # Set true to disable Vault locally
 
-# ── F5 Big-IP (optional) ───────────────────────────────────────────────
-# When enabled, /acme/deploy uploads the certificate to each F5 host via
-# iControl REST and updates matching Client SSL profiles.
-
-# f5:
-#   hosts:
-#     - addr: "https://bigip.example.com"
-#       username: "admin"
-#       password_path: "/run/secrets/f5_password"   # File containing the password
-#       verify: true
+# ── F5 Big-IP (optional, via targets) ──────────────────────────────────
+# Removed the legacy ``f5:`` config section. Use ``targets:`` instead:
+#
+# targets:
+#   - name: bigip
+#     provider: f5
+#     addr: "https://bigip.example.com"
+#     username: "admin"
+#     password_path: "/run/secrets/f5_password"
+#     verify: true
 
 # ── OpenSSL key generation parameters (optional) ───────────────────────
 # Controls the cryptographic parameters used when generating private keys

@@ -92,18 +92,6 @@ class VaultConfig(BaseModel):
     skip: bool = False
 
 
-class F5HostConfig(BaseModel):
-    name: str | None = None
-    addr: str
-    username: str
-    password_path: str
-    verify: bool = True
-
-
-class F5Config(BaseModel):
-    hosts: list[F5HostConfig]
-
-
 class F5TargetConfig(BaseModel):
     """Configuration for a single F5 Big-IP deployment target.
 
@@ -230,7 +218,6 @@ class AppConfig(BaseModel):
     webhook: WebhookConfig
     repo: RepoConfig
     vault: VaultConfig | None = None
-    f5: F5Config | None = None
     dns: DnsConfig | None = None
     monitor: MonitorConfig | None = None
     targets: list[TargetConfig] | None = None

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 from app.auth import verify_api_key
 from app.cert_monitor import CertMonitor
-from app.config import AppConfig, F5TargetConfig, load_config
+from app.config import AppConfig, load_config
 from app.dns_probe import check_propagation, validate_nameserver
 from app.git_handler import clone_or_pull, commit_and_push
 from app.metrics import create_metrics_app, webhook_requests_total
@@ -67,25 +67,8 @@ async def lifespan(app: FastAPI):
     if config.vault and not config.vault.skip:
         vault_handler = VaultHandler(config.vault)
 
-    # Build the target list: merge explicit ``targets`` with any
-    # legacy ``f5`` section so existing configs keep working.
-    target_configs: list = []
     if config.targets:
-        target_configs.extend(config.targets)
-    if config.f5:
-        for i, host in enumerate(config.f5.hosts):
-            target_configs.append(
-                F5TargetConfig(
-                    name=host.name or f"f5-{i}",
-                    addr=host.addr,
-                    username=host.username,
-                    password_path=host.password_path,
-                    verify=host.verify,
-                    timeout=30,
-                )
-            )
-    if target_configs:
-        deploy_manager = DeployManager(target_configs)
+        deploy_manager = DeployManager(config.targets)
 
     if config.monitor:
         cert_monitor = CertMonitor(config.monitor, vault_handler, openssl=config.openssl)

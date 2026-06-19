@@ -135,17 +135,17 @@ Each target is a dictionary in the `targets` list. The `provider` field selects 
 | `services` | `str` | `"SMTP"` | Exchange services to enable (e.g. `"SMTP,IMAP"`). |
 | `timeout` | `int` | `120` | WinRM operation timeout in seconds. |
 
-### Legacy `f5` section
+### Legacy `f5` section (removed)
 
-If no `targets` list exists, legacy `f5.hosts` config is automatically migrated on startup:
+The legacy `f5:` config section was removed in favour of the unified `targets:` list. Migrate any existing `f5:` config to:
 
 ```yaml
-f5:
-  hosts:
-    - addr: "https://bigip.example.com"
-      username: "admin"
-      password_path: "/run/secrets/f5_password"
-      verify: true
+targets:
+  - provider: f5
+    name: bigip
+    addr: "https://bigip.example.com"
+    username: "admin"
+    password_path: "/run/secrets/f5_password"
+    verify: true
+    timeout: 30
 ```
-
-Each host becomes a target named `f5-0`, `f5-1`, etc.
