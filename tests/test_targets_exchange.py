@@ -24,6 +24,64 @@ class TestReadPassword:
             _read_password(str(pw_file))
 
 
+class TestExchangeEnsureWinRM:
+    @pytest.fixture
+    def target(self, tmp_path: Path):
+        pw_file = tmp_path / "exchange_pass"
+        pw_file.write_text("exchange-secret")
+        cfg = ExchangeTargetConfig(
+            name="exchange-smtp",
+            addr="https://exchange.example.com:5986",
+            username="DOMAIN\\svc-cert",
+            password_path=str(pw_file),
+            verify=False,
+        )
+        return ExchangeTarget(cfg)
+
+    def test_ensure_winrm_creates_session(self, target):
+        mock_session = MagicMock()
+        with patch("app.targets.exchange.winrm") as mock_winrm:
+            mock_winrm.Session.return_value = mock_session
+            session = target._ensure_winrm()
+        assert session is mock_session
+        mock_winrm.Session.assert_called_once_with(
+            "https://exchange.example.com:5986",
+            auth=("DOMAIN\\svc-cert", "exchange-secret"),
+            transport="ntlm",
+            server_cert_validation="ignore",
+            operation_timeout_sec=120,
+            read_timeout_sec=150,
+        )
+
+    def test_ensure_winrm_reuses_password(self, target):
+        mock_session = MagicMock()
+        target._password = "cached-password"
+        with patch("app.targets.exchange.winrm") as mock_winrm:
+            mock_winrm.Session.return_value = mock_session
+            target._ensure_winrm()
+        _, kwargs = mock_winrm.Session.call_args
+        assert kwargs["auth"] == ("DOMAIN\\svc-cert", "cached-password")
+
+    def test_ensure_winrm_kerberos_transport(self, tmp_path: Path):
+        pw_file = tmp_path / "exchange_pass"
+        pw_file.write_text("secret")
+        cfg = ExchangeTargetConfig(
+            name="exchange-kerb",
+            addr="https://exchange.example.com:5986",
+            username="user@DOMAIN.COM",
+            password_path=str(pw_file),
+            transport="kerberos",
+            verify=True,
+        )
+        target = ExchangeTarget(cfg)
+        with patch("app.targets.exchange.winrm") as mock_winrm:
+            mock_winrm.Session.return_value = MagicMock()
+            target._ensure_winrm()
+        _, kwargs = mock_winrm.Session.call_args
+        assert kwargs["transport"] == "kerberos"
+        assert kwargs["server_cert_validation"] == "validate"
+
+
 class TestExchangeTarget:
     @pytest.fixture
     def target_config(self, tmp_path: Path):

@@ -23,6 +23,6 @@ def pem_to_pfx(fullchain_pem: str, privkey_pem: str) -> tuple[bytes, str]:
         key=private_key,
         cert=fullchain[0],
         cas=fullchain[1:] or None,
-        encryption=serialization.BestAvailableEncryption(password.encode()),
+        encryption_algorithm=serialization.BestAvailableEncryption(password.encode()),
     )
     return pfx_bytes, password

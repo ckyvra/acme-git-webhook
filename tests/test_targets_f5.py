@@ -39,6 +39,77 @@ class TestReadPassword:
             read_password(str(pw_file))
 
 
+class TestF5ApiCallsDirect:
+    """Cover _api_post, _api_put, _api_get directly."""
+
+    @pytest.fixture
+    def target(self, tmp_path: Path):
+        pw_file = tmp_path / "f5_pass"
+        pw_file.write_text("secret")
+        cfg = F5TargetConfig(
+            name="f5-paris",
+            addr="https://bigip.example.com",
+            username="admin",
+            password_path=str(pw_file),
+            verify=False,
+        )
+        return F5Target(cfg)
+
+    def test_api_post_calls_client_post(self, target):
+        mock_client = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {"result": "ok"}
+        mock_client.post.return_value = mock_resp
+        target._client = mock_client
+
+        result = target._api_post("sys/file/ssl-cert", {"name": "test"})
+
+        mock_client.post.assert_called_once_with(
+            "/mgmt/tm/sys/file/ssl-cert", json={"name": "test"}
+        )
+        assert result == {"result": "ok"}
+
+    def test_api_put_calls_client_put(self, target):
+        mock_client = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {"result": "ok"}
+        mock_client.put.return_value = mock_resp
+        target._client = mock_client
+
+        result = target._api_put("ltm/profile/client-ssl/Common/test", {"cert": "/Common/x"})
+
+        mock_client.put.assert_called_once_with(
+            "/mgmt/tm/ltm/profile/client-ssl/Common/test", json={"cert": "/Common/x"}
+        )
+        assert result == {"result": "ok"}
+
+    def test_api_get_calls_client_get(self, target):
+        mock_client = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {"items": []}
+        mock_client.get.return_value = mock_resp
+        target._client = mock_client
+
+        result = target._api_get("ltm/profile/client-ssl?$select=name")
+
+        mock_client.get.assert_called_once_with(
+            "/mgmt/tm/ltm/profile/client-ssl?$select=name"
+        )
+        assert result == {"items": []}
+
+    def test_api_post_raises_on_http_error(self, target):
+        mock_client = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "404", request=MagicMock(), response=MagicMock()
+        )
+        mock_client.post.return_value = mock_resp
+        target._client = mock_client
+
+        with pytest.raises(httpx.HTTPStatusError):
+            target._api_post("sys/file/ssl-cert", {})
+
+
 class TestF5Target:
     @pytest.fixture
     def target_config(self, tmp_path: Path):
