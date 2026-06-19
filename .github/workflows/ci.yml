@@ -87,6 +87,19 @@ jobs:
           python-version: "3.12"
       - run: pip install -r dev-requirements.txt
       - run: mkdocs build --strict
+      - name: Check French docs parity
+        run: |
+          missing=false
+          for f in docs/*.md; do
+            base=$(basename "$f")
+            if [ ! -f "docs/fr/$base" ]; then
+              echo "::warning::Missing French translation: docs/fr/$base"
+              missing=true
+            fi
+          done
+          if [ "$missing" = true ]; then
+            echo "Some French translations are missing. See warnings above."
+          fi
 
   deploy-docs:
     if: github.ref == 'refs/heads/main'
