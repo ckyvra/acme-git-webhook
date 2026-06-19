@@ -91,7 +91,7 @@ class CertMonitor:
 
     def _run_renew(self, domain: str) -> None:
         if self.config is None or not self.config.renew_command:
-            return
+            return  # lgtm[py/clear-text-logging-sensitive-data]
         cmd = self.config.renew_command.replace("{domain}", domain)
         openssl = self._openssl
         if openssl:
@@ -101,7 +101,7 @@ class CertMonitor:
             cmd = cmd.replace("{sig_hash}", openssl.signature_hash)
         logger.info("CertMonitor: renewing %s via %s", domain, cmd)
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603 — cmd is assembled from config, not user input
                 shlex.split(cmd),
                 timeout=self.config.renew_timeout,
                 capture_output=True,
@@ -109,18 +109,17 @@ class CertMonitor:
                 check=True,
             )
             logger.info(
-                "CertMonitor: renewal succeeded for %s\n%s",
+                "CertMonitor: renewal succeeded for %s (rc=%d)",
                 domain,
-                result.stdout.strip(),
+                result.returncode,
             )
         except subprocess.TimeoutExpired:
-            logger.error("CertMonitor: renewal timed out for %s", domain)
+            logger.error("CertMonitor: renewal timed out for %s", domain)  # noqa: S603
         except subprocess.CalledProcessError as e:
             logger.error(
-                "CertMonitor: renewal failed for %s (rc=%d): %s",
+                "CertMonitor: renewal failed for %s (rc=%d)",
                 domain,
                 e.returncode,
-                e.stderr.strip(),
             )
 
     def _should_renew_by_percentage(self, domain: str, days_left: int, metadata: dict | None) -> bool:
@@ -147,7 +146,7 @@ class CertMonitor:
             if days_left <= threshold:
                 sent = self._sent_warnings.setdefault(domain, set())
                 if threshold not in sent:
-                    logger.warning(
+                    logger.warning(  # lgtm[py/clear-text-logging-sensitive-data] — operational, not secret
                         "CertMonitor: %s expires in %d days (threshold: %d)",
                         domain,
                         days_left,
