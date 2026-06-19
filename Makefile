@@ -17,6 +17,9 @@ venv:
 test: venv
 	$(PYTEST) -v
 
+test-integration: venv
+	$(PYTEST) -v --run-integration
+
 lint: venv
 	$(VENV)/bin/ruff check .
 	$(VENV)/bin/ruff format --check .

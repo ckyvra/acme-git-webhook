@@ -64,6 +64,12 @@ make test
 
 # Run with coverage
 .venv/bin/python -m pytest --cov=app -v
+
+# Integration tests (Docker + network required)
+make test-integration
+
+# Or directly
+.venv/bin/python -m pytest --run-integration -v
 ```
 
 ## Linting
@@ -77,10 +83,11 @@ Runs `py_compile` over all application and test source files to verify syntax.
 ## Development workflow
 
 ```make
-make check       # lint + test
-make test        # run tests only
-make lint        # syntax check only
-make clean       # remove venv and __pycache__
+make check             # lint + test
+make test              # run unit tests only
+make test-integration  # run all tests including integration
+make lint              # syntax check only
+make clean             # remove venv and __pycache__
 ```
 
 ## Writing tests
@@ -119,7 +126,7 @@ app/
     └── _crypto.py       # PEM-to-PFX conversion
 
 tests/
-├── conftest.py          # Shared fixtures
+├── conftest.py          # Shared fixtures (+ --run-integration option)
 ├── test_config.py
 ├── test_main.py
 ├── test_zone_handler.py
@@ -127,6 +134,7 @@ tests/
 ├── test_vault_handler.py
 ├── test_dns_probe.py
 ├── test_cert_monitor.py
+├── test_integration.py  # DNS + Vault integration tests (--run-integration)
 ├── test_targets_f5.py
 ├── test_targets_ivanti.py
 ├── test_targets_exchange.py
