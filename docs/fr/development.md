@@ -28,31 +28,18 @@ make install   # installe les dépendances
 ## Tests
 
 ```bash
-# Exécuter tous les tests
+# Exécuter tous les tests unitaires
 make test
 
 # Ou directement avec pytest
 .venv/bin/python -m pytest -v
 
 # Avec couverture
-.venv/bin/python -m pytest -v --cov=acme_webhook --cov-report=term-missing
-```
+.venv/bin/python -m pytest --cov=app -v
 
-Les tests sont organisés par module dans `tests/` :
-
-```
-tests/
-├── test_acme.py
-├── test_config.py
-├── test_dns.py
-├── test_git.py
-├── test_vault.py
-├── test_monitor.py
-├── test_targets/
-│   ├── test_f5.py
-│   ├── test_ivanti.py
-│   └── test_exchange.py
-└── conftest.py
+# Tests d'intégration (nécessite Docker et réseau)
+make test-integration
+.venv/bin/python -m pytest --run-integration -v
 ```
 
 !!! tip "Nouveaux tests"
@@ -97,7 +84,20 @@ acme-git-webhook/
 │       ├── __init__.py
 │       └── crypto.py        # Conversion PEM/PFX
 ├── tests/
-│   └── ...
+│   ├── conftest.py              # Fixtures partagées (+ option --run-integration)
+│   ├── test_config.py
+│   ├── test_main.py
+│   ├── test_zone_handler.py
+│   ├── test_git_handler.py
+│   ├── test_vault_handler.py
+│   ├── test_dns_probe.py
+│   ├── test_cert_monitor.py
+│   ├── test_integration.py      # Tests d'intégration DNS/Vault
+│   ├── test_targets_f5.py
+│   ├── test_targets_ivanti.py
+│   ├── test_targets_exchange.py
+│   ├── test_targets_crypto.py
+│   └── test_targets_manager.py
 ├── helm/
 │   └── ...
 ├── docs/
@@ -119,7 +119,8 @@ acme-git-webhook/
 | Commande | Description |
 |----------|-------------|
 | `make install` | Crée le venv et installe les dépendances |
-| `make test` | Exécute pytest |
+| `make test` | Exécute les tests unitaires |
+| `make test-integration` | Exécute tous les tests (y compris intégration) |
 | `make lint` | Vérifie la syntaxe et le style |
 | `make check` | Exécute lint + test |
 | `make clean` | Supprime le venv et les caches |
