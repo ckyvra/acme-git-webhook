@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fasteners import InterProcessLock
 from slowapi import Limiter
@@ -233,6 +233,22 @@ def health():
     process is alive and accepting requests.
     """
     return {"status": "ok"}
+
+
+_dashboard_html: str | None = None
+
+
+def _load_dashboard() -> str:
+    global _dashboard_html
+    if _dashboard_html is None:
+        path = Path(__file__).resolve().parent / "static" / "dashboard.html"
+        _dashboard_html = path.read_text()
+    return _dashboard_html
+
+
+@app.get("/", response_class=HTMLResponse)
+def dashboard(_token: str = Depends(_auth_dep)):
+    return _load_dashboard()
 
 
 @app.post("/acme/auth")
