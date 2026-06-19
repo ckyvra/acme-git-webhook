@@ -205,6 +205,7 @@ class MonitorConfig(BaseModel):
     renew_command: str | None = None
     renew_timeout: int = 300
     renew_threshold: int = 14
+    renew_percentage: int | None = None
 
 
 class AppConfig(BaseModel):

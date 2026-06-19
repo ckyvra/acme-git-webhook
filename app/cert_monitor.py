@@ -69,6 +69,7 @@ class CertMonitor:
                     "expiry": expiry.isoformat() if expiry else None,
                     "days_left": days_left,
                     "stored_at": metadata.get("stored_at"),
+                    "metadata": metadata,
                 })
             except Exception:
                 logger.warning("CertMonitor: failed to read cert for %s", domain, exc_info=True)
@@ -124,7 +125,23 @@ class CertMonitor:
                 domain, e.returncode, e.stderr.strip(),
             )
 
-    def _check_day_threshold(self, domain: str, days_left: int) -> None:
+    def _should_renew_by_percentage(self, domain: str, days_left: int, metadata: dict | None) -> bool:
+        pct = self.config.renew_percentage
+        if pct is None or metadata is None:
+            return False
+        not_before = metadata.get("not_before")
+        expiry = metadata.get("expiry")
+        if not not_before or not expiry or not_before == "unknown" or expiry == "unknown":
+            return False
+        try:
+            total = (datetime.fromisoformat(expiry) - datetime.fromisoformat(not_before)).days
+            if total <= 0:
+                return False
+            return days_left / total * 100 <= pct
+        except (ValueError, TypeError):
+            return False
+
+    def _check_day_threshold(self, domain: str, days_left: int, metadata: dict | None = None) -> None:
         if self.config is None:
             return
         for threshold in self.config.warn_days:
@@ -140,9 +157,13 @@ class CertMonitor:
                     self._send_webhook_alert(domain, days_left)
                     sent.add(threshold)
 
+        should_renew = (
+            days_left <= self.config.renew_threshold
+            or self._should_renew_by_percentage(domain, days_left, metadata)
+        )
         if (
             self.config.renew_command
-            and days_left <= self.config.renew_threshold
+            and should_renew
             and domain not in self._renewing
         ):
             self._renewing.add(domain)
@@ -153,7 +174,7 @@ class CertMonitor:
         for cert in certs:
             days = cert.get("days_left")
             if days is not None and self.config is not None:
-                self._check_day_threshold(cert["domain"], days)
+                self._check_day_threshold(cert["domain"], days, metadata=cert.get("metadata"))
         self._latest_status = certs
         logger.info("CertMonitor: checked %d certificates", len(certs))
         return certs

@@ -13,7 +13,7 @@ import pytest
 from hvac.exceptions import InvalidPath, VaultError
 
 from app.config import VaultConfig
-from app.vault_handler import VaultHandler, _extract_expiry
+from app.vault_handler import VaultHandler, _extract_expiry, _extract_not_before
 
 
 @pytest.fixture
@@ -58,6 +58,37 @@ class TestExtractExpiry:
         ):
             result = _extract_expiry("invalid-pem")
             assert result is None
+
+
+class TestExtractNotBefore:
+    def test_valid_cert(self):
+        parsed = MagicMock()
+        parsed.not_valid_before_utc.isoformat.return_value = "2025-06-15T00:00:00+00:00"
+        with patch(
+            "app.vault_handler.x509.load_pem_x509_certificate",
+            return_value=parsed,
+        ):
+            result = _extract_not_before(SAMPLE_CERT_PEM)
+            assert result == "2025-06-15T00:00:00+00:00"
+
+    def test_invalid_cert_returns_none(self):
+        with patch(
+            "app.vault_handler.x509.load_pem_x509_certificate",
+            side_effect=ValueError("bad PEM"),
+        ):
+            result = _extract_not_before("invalid-pem")
+            assert result is None
+
+    def test_not_before_stored_in_metadata(self):
+        mock_not_before = MagicMock()
+        mock_not_before.not_valid_before_utc.isoformat.return_value = "2025-01-01T00:00:00+00:00"
+        mock_not_before.not_valid_after_utc.isoformat.return_value = "2026-01-01T00:00:00+00:00"
+        with patch(
+            "app.vault_handler.x509.load_pem_x509_certificate",
+            return_value=mock_not_before,
+        ):
+            result = _extract_not_before(SAMPLE_CERT_PEM)
+            assert result == "2025-01-01T00:00:00+00:00"
 
 
 class TestReadSecretId:

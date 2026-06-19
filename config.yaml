@@ -89,3 +89,4 @@ vault:
 #   # renew_command: "certbot renew --cert-name {domain} --key-type {key_type} --rsa-key-size {key_size} --elliptic-curve {curve} --server https://emea.acme.atlas.globalsign.com/directory --deploy-hook /opt/deploy-hook.sh --config-dir /data/acme-git-webhook/letsencrypt --work-dir /tmp/certbot-work --logs-dir /tmp/certbot-logs"
 #   renew_timeout: 300                # Max seconds for renewal command
 #   renew_threshold: 14               # Days before expiry to auto-renew
+#   renew_percentage: 15              # Alternative: renew when <=15% of cert lifetime remains

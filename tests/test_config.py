@@ -11,6 +11,7 @@ from app.config import (
     VaultConfig,
     OpensslConfig,
     PostQuantumConfig,
+    MonitorConfig,
 )
 
 
@@ -295,3 +296,27 @@ class TestAppConfigWithOpenssl:
         assert cfg.openssl.key_algorithm == "ecdsa"
         assert cfg.openssl.ecdsa_curve == "secp521r1"
         assert cfg.openssl.signature_hash == "sha512"
+
+
+class TestMonitorConfigWithPercentage:
+    def test_renew_percentage_default_none(self):
+        cfg = MonitorConfig()
+        assert cfg.renew_percentage is None
+
+    def test_renew_percentage_set(self):
+        cfg = MonitorConfig(renew_percentage=15)
+        assert cfg.renew_percentage == 15
+
+    def test_renew_percentage_zero(self):
+        cfg = MonitorConfig(renew_percentage=0)
+        assert cfg.renew_percentage == 0
+
+    def test_renew_percentage_backward_compatible(self):
+        cfg = MonitorConfig()
+        assert cfg.renew_threshold == 14
+        assert cfg.renew_percentage is None
+
+    def test_both_thresholds_can_coexist(self):
+        cfg = MonitorConfig(renew_threshold=14, renew_percentage=15)
+        assert cfg.renew_threshold == 14
+        assert cfg.renew_percentage == 15

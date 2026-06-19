@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
@@ -5,6 +6,7 @@ import pytest
 
 from app.cert_monitor import CertMonitor
 from app.config import MonitorConfig, OpensslConfig
+from app.vault_handler import _extract_not_before
 
 
 def _expiry_iso(days_ahead: int = 30) -> str:
@@ -473,3 +475,179 @@ class TestCertMonitorOpensslTemplateVars:
             assert "--rsa-key-size 2048" in cmd
             assert "--elliptic-curve secp256r1" in cmd
             assert "-sha256" in cmd
+
+
+class TestCertMonitorRenewPercentage:
+    def _make_metadata(self, days_ago: int, total_days: int) -> dict:
+        from datetime import timedelta
+        now = datetime.now(timezone.utc)
+        not_before = (now - timedelta(days=total_days - days_ago)).isoformat()
+        expiry = (now + timedelta(days=days_ago)).isoformat()
+        return {"not_before": not_before, "expiry": expiry}
+
+    def test_renews_when_below_percentage(self):
+        config = MonitorConfig(
+            renew_command="echo renew",
+            renew_threshold=0,
+            renew_percentage=15,
+            warn_days=[],
+        )
+        vault = MagicMock()
+        vault._client.secrets.kv.v2.list_secrets.return_value = {
+            "data": {"keys": ["example.com/"]}
+        }
+        metadata = self._make_metadata(days_ago=10, total_days=100)
+        vault._client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {"data": {"metadata": json.dumps(metadata)}}
+        }
+        vault.config.kv_mount = "secret"
+        vault.config.certs_path = "certs"
+
+        monitor = CertMonitor(config, vault)
+        with patch.object(monitor, "_run_renew") as mock_renew:
+            monitor.run_check()
+            mock_renew.assert_called_once_with("example.com")
+
+    def test_does_not_renew_when_above_percentage(self):
+        config = MonitorConfig(
+            renew_command="echo renew",
+            renew_threshold=0,
+            renew_percentage=10,
+            warn_days=[],
+        )
+        vault = MagicMock()
+        vault._client.secrets.kv.v2.list_secrets.return_value = {
+            "data": {"keys": ["example.com/"]}
+        }
+        metadata = self._make_metadata(days_ago=20, total_days=100)
+        vault._client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {"data": {"metadata": json.dumps(metadata)}}
+        }
+        vault.config.kv_mount = "secret"
+        vault.config.certs_path = "certs"
+
+        monitor = CertMonitor(config, vault)
+        with patch.object(monitor, "_run_renew") as mock_renew:
+            monitor.run_check()
+            mock_renew.assert_not_called()
+
+    def test_falls_back_to_day_threshold_when_no_metadata(self):
+        config = MonitorConfig(
+            renew_command="echo renew",
+            renew_threshold=30,
+            renew_percentage=15,
+            warn_days=[],
+        )
+        vault = MagicMock()
+        vault._client.secrets.kv.v2.list_secrets.return_value = {
+            "data": {"keys": ["example.com/"]}
+        }
+        vault._client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {
+                "data": {
+                    "metadata": '{"domain": "example.com", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
+                }
+            }
+        }
+        vault.config.kv_mount = "secret"
+        vault.config.certs_path = "certs"
+
+        monitor = CertMonitor(config, vault)
+        with patch.object(monitor, "_run_renew") as mock_renew:
+            monitor.run_check()
+            mock_renew.assert_called_once_with("example.com")
+
+    def test_percentage_noop_when_renew_percentage_none(self):
+        config = MonitorConfig(
+            renew_command="echo renew",
+            renew_threshold=0,
+            renew_percentage=None,
+            warn_days=[],
+        )
+        vault = MagicMock()
+        vault._client.secrets.kv.v2.list_secrets.return_value = {
+            "data": {"keys": ["example.com/"]}
+        }
+        vault._client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {
+                "data": {
+                    "metadata": '{"domain": "example.com", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
+                }
+            }
+        }
+        vault.config.kv_mount = "secret"
+        vault.config.certs_path = "certs"
+
+        monitor = CertMonitor(config, vault)
+        with patch.object(monitor, "_run_renew") as mock_renew:
+            monitor.run_check()
+            mock_renew.assert_not_called()
+
+    def test_percentage_ignored_when_days_threshold_explicitly_hit_first(self):
+        config = MonitorConfig(
+            renew_command="echo renew",
+            renew_threshold=30,
+            renew_percentage=1,
+            warn_days=[],
+        )
+        vault = MagicMock()
+        vault._client.secrets.kv.v2.list_secrets.return_value = {
+            "data": {"keys": ["example.com/"]}
+        }
+        metadata = self._make_metadata(days_ago=10, total_days=100)
+        vault._client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {"data": {"metadata": json.dumps(metadata)}}
+        }
+        vault.config.kv_mount = "secret"
+        vault.config.certs_path = "certs"
+
+        monitor = CertMonitor(config, vault)
+        with patch.object(monitor, "_run_renew") as mock_renew:
+            monitor.run_check()
+            mock_renew.assert_called_once_with("example.com")
+
+    def test_not_before_with_unknown_falls_back(self):
+        config = MonitorConfig(
+            renew_command="echo renew",
+            renew_threshold=30,
+            renew_percentage=15,
+            warn_days=[],
+        )
+        vault = MagicMock()
+        vault._client.secrets.kv.v2.list_secrets.return_value = {
+            "data": {"keys": ["example.com/"]}
+        }
+        vault._client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {
+                "data": {
+                    "metadata": '{"domain": "example.com", "not_before": "unknown", "expiry": "' + _expiry_iso(20) + '", "stored_at": "2025-01-01T00:00:00+00:00"}'
+                }
+            }
+        }
+        vault.config.kv_mount = "secret"
+        vault.config.certs_path = "certs"
+
+        monitor = CertMonitor(config, vault)
+        with patch.object(monitor, "_run_renew") as mock_renew:
+            monitor.run_check()
+            mock_renew.assert_called_once_with("example.com")
+
+
+class TestExtractNotBeforeDirect:
+    def test_valid_cert(self):
+        parsed = MagicMock()
+        parsed.not_valid_before_utc.isoformat.return_value = "2025-01-01T00:00:00+00:00"
+        with patch(
+            "app.vault_handler.x509.load_pem_x509_certificate",
+            return_value=parsed,
+        ):
+            result = _extract_not_before("-----BEGIN CERTIFICATE-----\nMIID...\n-----END CERTIFICATE-----")
+            assert result == "2025-01-01T00:00:00+00:00"
+
+    def test_invalid_cert_returns_none(self):
+        with patch(
+            "app.vault_handler.x509.load_pem_x509_certificate",
+            side_effect=ValueError("bad PEM"),
+        ):
+            result = _extract_not_before("invalid-pem")
+            assert result is None

@@ -45,6 +45,23 @@ def _extract_expiry(cert_pem: str) -> str | None:
         return None
 
 
+def _extract_not_before(cert_pem: str) -> str | None:
+    """Parse the notBefore date from a PEM certificate.
+
+    Args:
+        cert_pem: PEM-encoded X.509 certificate.
+
+    Returns:
+        ISO-8601 formatted notBefore string, or None if parsing fails.
+    """
+    try:
+        cert = x509.load_pem_x509_certificate(cert_pem.encode(), default_backend())
+        return cert.not_valid_before_utc.isoformat()
+    except Exception:
+        logger.warning("Failed to parse certificate notBefore", exc_info=True)
+        return None
+
+
 class VaultHandler:
     """Handles authentication to Vault and certificate storage operations.
 
@@ -184,10 +201,12 @@ class VaultHandler:
 
         # Build metadata about the certificate.
         expiry = _extract_expiry(cert_pem)
+        not_before = _extract_not_before(cert_pem)
         metadata = {
             "domain": domain,
             "issuer": "Let's Encrypt",
             "stored_at": datetime.now(timezone.utc).isoformat(),
+            "not_before": not_before or "unknown",
             "expiry": expiry or "unknown",
         }
 
