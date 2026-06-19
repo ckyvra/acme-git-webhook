@@ -1,6 +1,10 @@
+import json
 import logging
 import os
+import uuid
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
@@ -13,6 +17,21 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 logger = logging.getLogger(__name__)
+_request_id: ContextVar[str] = ContextVar("request_id", default="")
+
+
+class JSONFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        return json.dumps(
+            {
+                "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
+                "level": record.levelname,
+                "logger": record.name,
+                "message": record.getMessage(),
+                "request_id": _request_id.get() or None,
+            },
+            default=str,
+        )
 
 from app.auth import verify_api_key
 from app.cert_monitor import CertMonitor
@@ -59,6 +78,11 @@ async def lifespan(app: FastAPI):
     relative to the working directory.
     """
     global config, vault_handler, deploy_manager, cert_monitor
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(JSONFormatter())
+    logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
+
     config_path = os.getenv("CONFIG_PATH", "config.yaml")
     config = load_config(config_path)
     env_key = os.environ.get("ACME_WEBHOOK_API_KEY")
@@ -85,6 +109,15 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 app.mount("/metrics", create_metrics_app())
+
+
+@app.middleware("http")
+async def _add_request_id(request: Request, call_next):
+    req_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    _request_id.set(req_id)
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = req_id
+    return response
 
 
 @app.middleware("http")
