@@ -88,6 +88,15 @@ app.mount("/metrics", create_metrics_app())
 
 
 @app.middleware("http")
+async def _add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    return response
+
+
+@app.middleware("http")
 async def _count_requests(request: Request, call_next):
     response = await call_next(request)
     endpoint = request.url.path
