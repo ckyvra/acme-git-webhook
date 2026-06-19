@@ -89,6 +89,17 @@ monitor:
     --logs-dir /tmp/certbot-logs
   renewTimeout: 300
   renewThreshold: 14
+  renewPercentage:
+  alertWebhookHeaders: {}
+
+# ── OpenSSL configuration (optional) ──────────────────────────────
+
+openssl:
+  enabled: false
+  keyAlgorithm: ecdsa
+  rsaKeySize: 4096
+  ecdsaCurve: secp384r1
+  signatureHash: sha384
 
 # ── ACME GlobalSign registration (one-time) ────────────────────────
 # EAB credentials are sourced from the ExternalSecret.
