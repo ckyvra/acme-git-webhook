@@ -7,6 +7,23 @@ from git import Repo
 from app.config import AppConfig, AuthConfig, RepoConfig, WebhookConfig
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--run-integration",
+        action="store_true",
+        default=False,
+        help="Run integration tests (require Docker, network, etc.)",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if not config.getoption("--run-integration"):
+        skip_integration = pytest.mark.skip(reason="Use --run-integration to enable")
+        for item in items:
+            if "integration" in item.keywords:
+                item.add_marker(skip_integration)
+
+
 @pytest.fixture
 def sample_zone(tmp_path: Path) -> Path:
     src = Path(__file__).parent / "sample.zone"
