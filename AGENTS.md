@@ -1,10 +1,49 @@
 # AI-assisted development guidelines
 
-## Branch workflow
+## Strict rule: no direct pushes to `main` — ever
 
-- **Never commit directly to `main`** — all work must be done on a dedicated feature branch.
-- Feature branches should follow the naming convention: `feat/<short-description>`, `fix/<short-description>`, `docs/<short-description>`.
-- Create a Pull Request from the feature branch to `main` for every change.
+> **This is the most important rule.** All changes, without exception, must go through a feature branch and a Pull Request. Direct pushes to `main` are strictly forbidden for everyone, including the AI.
+
+### Enforcement (GitHub repo settings)
+
+Enable branch protection for `main`:
+
+1. **Settings → Branches → Add branch protection rule**
+2. Branch name pattern: `main`
+3. ✅ `Require a pull request before merging`
+4. ✅ `Require status checks to pass before merging` (select `test`, `lint`, `docs`)
+5. ✅ `Require branches to be up to date`
+6. ✅ `Do not allow bypassing the above settings`
+7. ❌ `Allow force pushes` — **must be unchecked**
+
+This prevents both human error and AI from writing directly to `main`.
+
+### Workflow
+
+1. Start from `main` — always branch off the latest `main`:
+   ```bash
+   git checkout main && git pull origin main
+   git checkout -b <type>/<short-description>
+   ```
+2. Make changes, run tests, commit **on the feature branch only**.
+3. Push the feature branch and create a Pull Request:
+   ```bash
+   git push origin <branch>
+   gh pr create --title "<type>: <description>" --body "Closes #<issue>"
+   ```
+4. Never use `git push origin main` — if it happens, force-push protection on the remote will reject it.
+
+### Branch naming convention
+
+- `feat/<short-description>` — new features
+- `fix/<short-description>` — bug fixes
+- `docs/<short-description>` — documentation (README, MkDocs, AGENTS.md)
+- `refactor/<short-description>` — code refactoring
+- `test/<short-description>` — test-only changes
+- `chore/<short-description>` — tooling, CI, dependencies
+
+### Auto-merge
+
 - Include `Closes #<issue-number>` in the PR description to automatically close the related issue when the PR is merged (GitHub native feature).
 - An automated workflow merges PRs labelled `auto-merge` when all checks pass and a review is approved.
 - PRs labelled `hold` will never be merged automatically.
