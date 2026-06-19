@@ -1,5 +1,5 @@
 -r requirements.txt
-pytest==9.1.0
+pytest==9.1.1
 pytest-cov
 httpx==0.28.1
 mkdocs-material>=9.6,<10
