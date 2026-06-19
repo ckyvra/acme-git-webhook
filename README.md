@@ -4,7 +4,6 @@
 [![codecov](https://codecov.io/gh/ckyvra/acme-git-webhook/branch/main/graph/badge.svg)](https://codecov.io/gh/ckyvra/acme-git-webhook)
 [![version](https://img.shields.io/github/v/tag/ckyvra/acme-git-webhook?label=version)](https://github.com/ckyvra/acme-git-webhook/tags)
 [![ghcr](https://img.shields.io/badge/GHCR-latest-blue?logo=docker)](https://github.com/ckyvra/acme-git-webhook/pkgs/container/acme-git-webhook)
-[![codeql](https://github.com/ckyvra/acme-git-webhook/actions/workflows/codeql.yml/badge.svg)](https://github.com/ckyvra/acme-git-webhook/security/code-scanning)
 
 FastAPI webhook that provisions ACME DNS-01 challenges by adding/removing
 TXT records in Bind zone files stored in a Git repository, optionally
