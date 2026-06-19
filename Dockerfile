@@ -15,6 +15,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ ./app/
+COPY scripts/ ./scripts/
 COPY config.yaml .
 
 RUN mkdir -p /data/acme-git-webhook/letsencrypt && chown -R app:app /data/acme-git-webhook

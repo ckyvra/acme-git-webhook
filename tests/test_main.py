@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from git import Repo
 
-from app.config import AppConfig, AuthConfig, DnsConfig, MonitorConfig, RepoConfig, VaultConfig, WebhookConfig
+from app.config import AppConfig, AuthConfig, DnsConfig, F5Config, F5HostConfig, F5TargetConfig, MonitorConfig, RepoConfig, VaultConfig, WebhookConfig
 from app.main import app
 from app.targets.base import DeployResult
 from app.targets.manager import DeployManager
@@ -994,6 +994,217 @@ class TestAcmeRenew:
             headers={"Authorization": "Bearer test-key"},
         )
         assert resp.status_code == 422
+
+
+class TestListTargets:
+    def test_list_targets_empty(self, client: TestClient):
+        import app.main as m
+
+        m.deploy_manager = None
+        resp = client.get(
+            "/targets",
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 200
+        assert resp.json() == {"targets": []}
+
+    def test_list_targets_with_targets(self, client: TestClient):
+        import app.main as m
+
+        mock_mgr = MagicMock()
+        mock_mgr.targets = {"f5-0": MagicMock(provider_type="f5")}
+        m.deploy_manager = mock_mgr
+        resp = client.get(
+            "/targets",
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 200
+        assert resp.json() == {"targets": [{"name": "f5-0", "provider": "f5"}]}
+
+
+class TestDeployTargets:
+    def test_deploy_no_manager(self, client: TestClient):
+        import app.main as m
+
+        m.deploy_manager = None
+        resp = client.post(
+            "/deploy/example.com",
+            json={"fullchain_pem": "chain", "privkey_pem": "key"},
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 400
+        assert "No deployment targets configured" in resp.json()["detail"]
+
+    def test_deploy_to_single_target(self, client: TestClient, tmp_path: Path):
+        import app.main as m
+
+        mock_mgr = MagicMock()
+        mock_mgr.deploy.return_value = [DeployResult(target="f5-0", provider="f5", status="ok")]
+        m.deploy_manager = mock_mgr
+        resp = client.post(
+            "/deploy/example.com/my-target",
+            json={"fullchain_pem": "chain", "privkey_pem": "key"},
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 200
+        mock_mgr.deploy.assert_called_once()
+
+    def test_deploy_vault_fallback_handler_none(self, client: TestClient, tmp_path: Path):
+        import app.main as m
+
+        mock_mgr = MagicMock()
+        m.deploy_manager = mock_mgr
+        m.vault_handler = None
+        resp = client.post(
+            "/deploy/example.com",
+            json={},
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 502
+        assert "Vault handler not available" in resp.json()["detail"]
+
+    def test_deploy_vault_fallback_client_none(self, client: TestClient, tmp_path: Path):
+        import app.main as m
+
+        mock_mgr = MagicMock()
+        m.deploy_manager = mock_mgr
+        mock_vault = MagicMock()
+        mock_vault._client = None
+        m.vault_handler = mock_vault
+        resp = client.post(
+            "/deploy/example.com",
+            json={},
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 502
+        assert "Vault client not initialized" in resp.json()["detail"]
+
+    def test_deploy_vault_fallback_read_failure(self, client: TestClient, tmp_path: Path):
+        import app.main as m
+
+        mock_mgr = MagicMock()
+        m.deploy_manager = mock_mgr
+        mock_vault = MagicMock()
+        mock_vault._client.secrets.kv.v2.read_secret_version.side_effect = RuntimeError("Vault down")
+        m.vault_handler = mock_vault
+        resp = client.post(
+            "/deploy/example.com",
+            json={},
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 502
+        assert "Failed to read certificate from Vault" in resp.json()["detail"]
+
+    def test_deploy_vault_fallback_read_success(self, client: TestClient, tmp_path: Path):
+        import app.main as m
+
+        mock_mgr = MagicMock()
+        mock_mgr.deploy.return_value = [DeployResult(target="f5-0", provider="f5", status="ok")]
+        m.deploy_manager = mock_mgr
+        mock_vault = MagicMock()
+        mock_vault._client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {
+                "data": {
+                    "fullchain.pem": "chain",
+                    "privkey.pem": "key",
+                }
+            }
+        }
+        m.vault_handler = mock_vault
+        resp = client.post(
+            "/deploy/example.com",
+            json={},
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 200
+        mock_mgr.deploy.assert_called_once()
+
+
+class TestRateLimitExceeded:
+    def test_rate_limit_exceeded_handler(self):
+        from unittest.mock import MagicMock as _MagicMock
+
+        from slowapi.errors import RateLimitExceeded
+        from starlette.requests import Request
+        from starlette.responses import JSONResponse
+
+        from app.main import _rate_limit_exceeded_handler
+
+        scope = {"type": "http", "method": "GET", "path": "/health"}
+        request = Request(scope)
+        exc = RateLimitExceeded(limit=_MagicMock())
+        response = _rate_limit_exceeded_handler(request, exc)
+        assert isinstance(response, JSONResponse)
+        assert response.status_code == 429
+        assert response.body == b'{"detail":"Rate limit exceeded, try again later"}'
+
+
+class TestLifespan:
+    def test_lifespan_with_all_features(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setenv("CONFIG_PATH", str(tmp_path / "config.yaml"))
+        secret_id_file = tmp_path / "vault_secret_id"
+        secret_id_file.write_text("test-secret-id")
+        pwd_file = tmp_path / "f5_password"
+        pwd_file.write_text("f5-password")
+
+        cfg = AppConfig(
+            auth=AuthConfig(api_keys=["test-key"]),
+            webhook=WebhookConfig(work_dir=str(tmp_path / "webhook")),
+            repo=RepoConfig(url=str(tmp_path / "fake.git"), branch="main", zone_path="zones"),
+            vault=VaultConfig(
+                addr="https://vault.example.com:8200",
+                role_id="role-abc",
+                secret_id_path=str(secret_id_file),
+                skip=False,
+            ),
+            targets=[
+                F5TargetConfig(
+                    name="t1",
+                    addr="https://f5.example.com",
+                    username="admin",
+                    password_path=str(pwd_file),
+                )
+            ],
+            f5=F5Config(
+                hosts=[
+                    F5HostConfig(
+                        addr="https://f5.example.com",
+                        username="admin",
+                        password_path=str(pwd_file),
+                    )
+                ]
+            ),
+            monitor=MonitorConfig(renew_command="echo renew"),
+        )
+
+        import app.main as m
+
+        m.cert_monitor = None
+        m.deploy_manager = None
+        m.config = None
+
+        with (
+            patch("app.main.load_config", return_value=cfg),
+            patch("app.main.VaultHandler") as mock_vault_cls,
+            patch("app.main.DeployManager") as mock_mgr_cls,
+            patch("app.main.CertMonitor") as mock_mon_cls,
+        ):
+            with TestClient(app) as client:
+                assert m.config is cfg
+                mock_vault_cls.assert_called_once()
+                mock_mgr_cls.assert_called_once()
+                mock_mon_cls.assert_called_once()
+                mock_mon_cls.return_value.start.assert_called_once()
+
+                resp = client.get(
+                    "/targets",
+                    headers={"Authorization": "Bearer test-key"},
+                )
+                assert resp.status_code == 200
+
+        # After lifespan shutdown, stop() and close() should have been called
+        mock_mon_cls.return_value.stop.assert_called_once()
+        mock_mgr_cls.return_value.close.assert_called_once()
 
 
 class TestConfigNotLoaded:

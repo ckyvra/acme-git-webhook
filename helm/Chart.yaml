@@ -3,7 +3,7 @@ name: acme-git-webhook
 description: ACME DNS-01 webhook with certbot, F5 Big-IP, and GlobalSign Atlas
 type: application
 version: 0.1.0
-appVersion: latest
+appVersion: "v0.4.0"
 keywords:
   - acme
   - certbot
