@@ -94,7 +94,7 @@ class CertMonitor:
     def _run_renew(self, domain: str) -> None:
         if self.config is None or not self.config.renew_command:
             return  # lgtm[py/clear-text-logging-sensitive-data]
-        cmd = self.config.renew_command.replace("{domain}", domain)
+        cmd = self.config.renew_command.replace("{domain}", shlex.quote(domain))
         openssl = self._openssl
         if openssl:
             cmd = cmd.replace("{key_type}", openssl.key_algorithm)
@@ -103,7 +103,7 @@ class CertMonitor:
             cmd = cmd.replace("{sig_hash}", openssl.signature_hash)
         logger.info("CertMonitor: renewing %s via %s", domain, cmd)
         try:
-            result = subprocess.run(  # noqa: S603 — cmd is assembled from config, not user input
+            result = subprocess.run(shlex.split(cmd),
                 shlex.split(cmd),
                 timeout=self.config.renew_timeout,
                 capture_output=True,
