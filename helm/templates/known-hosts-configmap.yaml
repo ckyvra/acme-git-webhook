@@ -1,0 +1,9 @@
+{{- if .Values.ssh.knownHosts }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "webhook.fullname" . }}-known-hosts
+  labels: {{ include "webhook.labels" . | nindent 4 }}
+data:
+  known_hosts: {{ .Values.ssh.knownHosts | quote }}
+{{- end }}

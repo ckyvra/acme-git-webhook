@@ -27,6 +27,11 @@ spec:
               - key: deploy_key
                 path: deploy_key
                 mode: 0400
+        {{- if .Values.ssh.knownHosts }}
+        - name: known-hosts
+          configMap:
+            name: {{ include "webhook.fullname" . }}-known-hosts
+        {{- end }}
         {{- if .Values.vault.enabled }}
         - name: vault-secret-id
           secret:
@@ -66,7 +71,11 @@ spec:
             - name: ACME_WEBHOOK_URL
               value: "http://localhost:8000"
             - name: GIT_SSH_COMMAND
+{{- if .Values.ssh.knownHosts }}
+              value: "ssh -i /run/secrets/deploy_key -o UserKnownHostsFile=/run/secrets/known_hosts -o StrictHostKeyChecking=yes"
+{{- else }}
               value: "ssh -i /run/secrets/deploy_key -o StrictHostKeyChecking=no"
+{{- end }}
 
           volumeMounts:
             - name: config
@@ -77,6 +86,11 @@ spec:
             - name: deploy-key
               mountPath: /run/secrets/deploy_key
               subPath: deploy_key
+            {{- if .Values.ssh.knownHosts }}
+            - name: known-hosts
+              mountPath: /run/secrets/known_hosts
+              subPath: known_hosts
+            {{- end }}
             {{- if .Values.vault.enabled }}
             - name: vault-secret-id
               mountPath: /run/secrets/vault_secret_id

@@ -31,11 +31,15 @@ class WebhookConfig(BaseModel):
         ssh_key: Path to a deploy SSH key (mounted file or secret).
             When set, GitPython is configured to use this key for
             authentication instead of the default SSH agent.
+        known_hosts_path: Path to a known_hosts file. When set together
+            with ``ssh_key``, GitPython performs strict host key
+            verification instead of disabling it.
     """
 
     bind: str = "0.0.0.0:8000"
     work_dir: str = "/data/acme-git-webhook"
     ssh_key: str | None = None
+    known_hosts_path: str | None = None
 
 
 class RepoConfig(BaseModel):

@@ -10,6 +10,9 @@ data:
 
     webhook:
       work_dir: "/data/acme-git-webhook/work"
+      {{- if .Values.ssh.knownHosts }}
+      known_hosts_path: "/run/secrets/known_hosts"
+      {{- end }}
 
     repo:
       url: {{ .Values.repo.url | quote }}

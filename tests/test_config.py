@@ -31,11 +31,18 @@ class TestWebhookConfig:
         assert cfg.bind == "0.0.0.0:8000"
         assert cfg.work_dir == "/data/acme-git-webhook"
         assert cfg.ssh_key is None
+        assert cfg.known_hosts_path is None
 
     def test_custom(self):
-        cfg = WebhookConfig(bind="127.0.0.1:9000", work_dir="/tmp/test", ssh_key="/key")
+        cfg = WebhookConfig(
+            bind="127.0.0.1:9000",
+            work_dir="/tmp/test",
+            ssh_key="/key",
+            known_hosts_path="/run/secrets/known_hosts",
+        )
         assert cfg.bind == "127.0.0.1:9000"
         assert cfg.ssh_key == "/key"
+        assert cfg.known_hosts_path == "/run/secrets/known_hosts"
 
 
 class TestRepoConfig:

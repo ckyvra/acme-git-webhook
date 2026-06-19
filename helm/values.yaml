@@ -31,6 +31,18 @@ repo:
   zonePath: "zones"
   zoneFileSuffix: ".zone"
 
+# ── SSH configuration (optional) ──────────────────────────────────
+# When `knownHosts` is set to the public key(s) of the Git server,
+# the deployment uses strict host key verification. Otherwise
+# StrictHostKeyChecking=no is used for backward compatibility.
+#
+# Example:
+#   knownHosts: |
+#     github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+
+ssh:
+  knownHosts: ""
+
 # ── HashiCorp Vault (optional) ─────────────────────────────────────
 
 vault:
