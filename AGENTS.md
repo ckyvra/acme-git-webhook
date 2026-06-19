@@ -21,6 +21,10 @@
    make lint
    ```
 3. Verify all 260+ tests pass and there are no new warnings.
+4. Update documentation to reflect the changes:
+   - **README.md** — update usage examples, config reference, API endpoints.
+   - **`docs/` (MkDocs)** — keep the English (`en/`) and French (`fr/`) documentation in sync with any new features, config fields, or behavioural changes.
+   - **Code comments and docstrings** — ensure public API docstrings are accurate, especially for new or modified endpoints.
 
 ## Code conventions
 
