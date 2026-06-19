@@ -48,6 +48,26 @@ jobs:
           dockerfile: Dockerfile
           config-file: .hadolint.yaml
 
+  container-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build Docker image
+        run: docker build -t acme-git-webhook:ci .
+      - name: Scan with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: acme-git-webhook:ci
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+      - name: Upload results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
   typecheck:
     runs-on: ubuntu-latest
     steps:
