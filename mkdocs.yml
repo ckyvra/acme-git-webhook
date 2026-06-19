@@ -1,0 +1,93 @@
+site_name: acme-git-webhook
+site_description: ACME DNS-01 webhook that provisions certificates via Git-managed Bind zone files, stores them in Vault, deploys to F5/Ivanti/Exchange, and monitors expiration.
+site_author: Christophe Kyvra
+repo_url: https://github.com/ckyvra/acme-git-webhook
+repo_name: ckyvra/acme-git-webhook
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+  - i18n:
+      docs_structure: suffix
+      languages:
+        - locale: en
+          name: English
+          build: true
+          default: true
+        - locale: fr
+          name: Français
+          build: true
+          nav_translations:
+            Overview: Présentation
+            Quick start: Démarrage rapide
+            Configuration: Configuration
+            API reference: Référence API
+            Deploy targets: Cibles de déploiement
+            F5 Big-IP: F5 Big-IP
+            Ivanti VPN: Ivanti VPN
+            Exchange SMTP: Exchange SMTP
+            Custom target: Cible personnalisée
+            Monitoring: Surveillance
+            GlobalSign Atlas: GlobalSign Atlas
+            Deployment: Déploiement
+            Development: Développement
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/ckyvra/acme-git-webhook
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - toc:
+      permalink: true
+
+nav:
+  - Overview: index.md
+  - Quick start: quickstart.md
+  - Configuration: configuration.md
+  - API reference: api.md
+  - Deploy targets:
+      - F5 Big-IP: targets/f5.md
+      - Ivanti VPN: targets/ivanti.md
+      - Exchange SMTP: targets/exchange.md
+      - Custom target: targets/custom.md
+  - Monitoring: monitoring.md
+  - GlobalSign Atlas: globalsign.md
+  - Deployment: deployment.md
+  - Development: development.md

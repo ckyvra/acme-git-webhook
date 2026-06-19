@@ -1,0 +1,152 @@
+name: auto-merge
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  pull_request_target:
+    types: [labeled, unlabeled, opened, synchronize, ready_for_review]
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'pull_request_target' || github.event_name == 'pull_request_review'
+    steps:
+      - uses: actions/github-script@v7
+        id: check-prs
+        env:
+          MAINTAINER: ckyvra
+        with:
+          script: |
+            const maintainer = process.env.MAINTAINER;
+
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              sort: "updated",
+              direction: "desc",
+            });
+
+            const results = { merged: [], notified: [], skipped: [] };
+
+            for (const pr of prs) {
+              const labels = pr.labels.map(l => l.name);
+
+              if (pr.draft) {
+                results.skipped.push({ number: pr.number, reason: "draft" });
+                continue;
+              }
+
+              // Refresh PR to get fresh mergeable state
+              const { data: fresh } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+              });
+
+              // mergeable can be null while GitHub computes it
+              if (fresh.mergeable === null) {
+                results.skipped.push({ number: pr.number, reason: "mergeability still computing" });
+                continue;
+              }
+
+              if (fresh.mergeable === false || fresh.mergeable_state === "dirty") {
+                results.skipped.push({ number: pr.number, reason: "merge conflict" });
+                continue;
+              }
+
+              if (fresh.mergeable_state !== "clean") {
+                results.skipped.push({ number: pr.number, reason: `state: ${fresh.mergeable_state}` });
+                continue;
+              }
+
+              // Check for approving review
+              const { data: reviews } = await github.rest.pulls.listReviews({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+              });
+
+              const latestStates = {};
+              for (const r of reviews) {
+                const state = r.state;
+                if (state === "APPROVED" || state === "CHANGES_REQUESTED" || state === "DISMISSED") {
+                  latestStates[r.user.login] = state;
+                }
+              }
+
+              const hasApproval = Object.values(latestStates).includes("APPROVED");
+              const hasChangesRequested = Object.values(latestStates).includes("CHANGES_REQUESTED");
+
+              if (hasChangesRequested) {
+                results.skipped.push({ number: pr.number, reason: "changes requested" });
+                continue;
+              }
+
+              if (!hasApproval) {
+                results.skipped.push({ number: pr.number, reason: "not approved" });
+                continue;
+              }
+
+              if (labels.includes("hold")) {
+                results.skipped.push({ number: pr.number, reason: "hold label" });
+                continue;
+              }
+
+              if (labels.includes("auto-merge")) {
+                try {
+                  await github.rest.pulls.merge({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: pr.number,
+                    merge_method: "squash",
+                  });
+                  results.merged.push(pr.number);
+                  core.info(`Auto-merged #${pr.number}: ${pr.title}`);
+                } catch (error) {
+                  core.warning(`Failed to merge #${pr.number}: ${error.message}`);
+                  results.skipped.push({ number: pr.number, reason: `merge error` });
+                }
+              } else {
+                // Notify maintainer — creates a comment which triggers a GH email
+                const { data: existingComments } = await github.rest.issues.listComments({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                });
+
+                const alreadyNotified = existingComments.some(
+                  c => c.body && c.body.includes("ready to merge")
+                );
+
+                if (!alreadyNotified) {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: pr.number,
+                    body: `@${maintainer} — PR **#${pr.number} (${pr.title})** is ready to merge. All checks pass and the PR is approved.\n\n👉 ${pr.html_url}`,
+                  });
+                  results.notified.push(pr.number);
+                  core.info(`Notified maintainer about #${pr.number}`);
+                } else {
+                  results.skipped.push({ number: pr.number, reason: "already notified" });
+                }
+              }
+            }
+
+            return results;
+
+      - name: Log results
+        env:
+          RESULTS: ${{ steps.check-prs.outputs.result }}
+        run: |
+          echo "Merged: $(echo "$RESULTS" | jq -r '.merged | join(", ")')"
+          echo "Notified: $(echo "$RESULTS" | jq -r '.notified | join(", ")')"
+          echo "Skipped: $(echo "$RESULTS" | jq -r '.skipped[] | "#\(.number): \(.reason)"' | paste -sd, -)"

@@ -38,6 +38,16 @@ jobs:
       - run: pip install -r dev-requirements.txt
       - run: python -m py_compile app/*.py tests/*.py
 
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r dev-requirements.txt
+      - run: mkdocs build --strict
+
   deploy:
     permissions:
       contents: read
