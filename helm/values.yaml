@@ -34,7 +34,9 @@ repo:
 # ── SSH configuration (optional) ──────────────────────────────────
 # When `knownHosts` is set to the public key(s) of the Git server,
 # the deployment uses strict host key verification. Otherwise
-# StrictHostKeyChecking=no is used for backward compatibility.
+# StrictHostKeyChecking=accept-new is used (accepts the key on first
+# connection but verifies it on subsequent ones). For the strictest
+# security, always set knownHosts with the server's public key.
 #
 # Example:
 #   knownHosts: |

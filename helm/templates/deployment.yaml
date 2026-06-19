@@ -74,7 +74,7 @@ spec:
 {{- if .Values.ssh.knownHosts }}
               value: "ssh -i /run/secrets/deploy_key -o UserKnownHostsFile=/run/secrets/known_hosts -o StrictHostKeyChecking=yes"
 {{- else }}
-              value: "ssh -i /run/secrets/deploy_key -o StrictHostKeyChecking=no"
+              value: "ssh -i /run/secrets/deploy_key -o StrictHostKeyChecking=accept-new"
 {{- end }}
 
           volumeMounts:
