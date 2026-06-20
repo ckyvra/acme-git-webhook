@@ -340,3 +340,189 @@ class TestMonitorConfigWithPercentage:
         cfg = MonitorConfig(renew_threshold=14, renew_percentage=15)
         assert cfg.renew_threshold == 14
         assert cfg.renew_percentage == 15
+
+
+class TestDeployWindow:
+    def test_default_days_all(self):
+        from app.config import DeployWindow
+
+        w = DeployWindow(start="08:00", end="18:00")
+        assert w.days == [1, 2, 3, 4, 5, 6, 7]
+        assert w.timezone == "UTC"
+
+    def test_custom_values(self):
+        from app.config import DeployWindow
+
+        w = DeployWindow(
+            start="22:00",
+            end="06:00",
+            days=[1, 2, 3, 4, 5],
+            timezone="Europe/Paris",
+        )
+        assert w.start == "22:00"
+        assert w.end == "06:00"
+        assert w.days == [1, 2, 3, 4, 5]
+        assert w.timezone == "Europe/Paris"
+
+
+class TestIsWithinWindow:
+    def test_within_normal_window(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, is_within_window
+
+        w = DeployWindow(start="08:00", end="18:00", days=[1, 2, 3, 4, 5])
+        dt = datetime(2026, 6, 22, 10, 0, tzinfo=UTC)  # Monday
+        assert is_within_window(w, dt)
+
+    def test_before_normal_window(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, is_within_window
+
+        w = DeployWindow(start="08:00", end="18:00", days=[1, 2, 3, 4, 5])
+        dt = datetime(2026, 6, 22, 6, 0, tzinfo=UTC)  # Monday 06:00
+        assert not is_within_window(w, dt)
+
+    def test_after_normal_window(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, is_within_window
+
+        w = DeployWindow(start="08:00", end="18:00", days=[1, 2, 3, 4, 5])
+        dt = datetime(2026, 6, 22, 20, 0, tzinfo=UTC)  # Monday 20:00
+        assert not is_within_window(w, dt)
+
+    def test_wrong_day(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, is_within_window
+
+        w = DeployWindow(start="08:00", end="18:00", days=[1, 2, 3, 4, 5])
+        dt = datetime(2026, 6, 27, 10, 0, tzinfo=UTC)  # Saturday
+        assert not is_within_window(w, dt)
+
+    def test_within_wrapping_window(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, is_within_window
+
+        w = DeployWindow(start="22:00", end="06:00")
+        dt = datetime(2026, 6, 22, 23, 0, tzinfo=UTC)  # Monday 23:00
+        assert is_within_window(w, dt)
+
+    def test_within_wrapping_window_early_morning(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, is_within_window
+
+        w = DeployWindow(start="22:00", end="06:00")
+        dt = datetime(2026, 6, 23, 3, 0, tzinfo=UTC)  # Tuesday 03:00
+        assert is_within_window(w, dt)
+
+    def test_before_wrapping_window(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, is_within_window
+
+        w = DeployWindow(start="22:00", end="06:00")
+        dt = datetime(2026, 6, 22, 20, 0, tzinfo=UTC)  # Monday 20:00
+        assert not is_within_window(w, dt)
+
+    def test_after_wrapping_window(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, is_within_window
+
+        w = DeployWindow(start="22:00", end="06:00")
+        dt = datetime(2026, 6, 23, 10, 0, tzinfo=UTC)  # Tuesday 10:00
+        assert not is_within_window(w, dt)
+
+    def test_timezone_conversion(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, is_within_window
+
+        w = DeployWindow(start="08:00", end="18:00", timezone="America/New_York")
+        # 12:00 UTC = 08:00 EDT (America/New_York in June = UTC-4)
+        dt = datetime(2026, 6, 22, 12, 0, tzinfo=UTC)
+        assert is_within_window(w, dt)
+
+    def test_edge_boundary_start_inclusive(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, is_within_window
+
+        w = DeployWindow(start="08:00", end="18:00")
+        dt = datetime(2026, 6, 22, 8, 0, tzinfo=UTC)  # Exactly at start
+        assert is_within_window(w, dt)
+
+    def test_edge_boundary_end_exclusive(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, is_within_window
+
+        w = DeployWindow(start="08:00", end="18:00")
+        dt = datetime(2026, 6, 22, 18, 0, tzinfo=UTC)  # Exactly at end
+        assert not is_within_window(w, dt)
+
+
+class TestNextWindowStart:
+    def test_next_start_same_day(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, next_window_start
+
+        w = DeployWindow(start="08:00", end="18:00", days=[1, 2, 3, 4, 5])
+        dt = datetime(2026, 6, 22, 6, 0, tzinfo=UTC)  # Monday 06:00
+        expected = datetime(2026, 6, 22, 8, 0, tzinfo=UTC)
+        assert next_window_start(w, dt) == expected
+
+    def test_next_start_next_day(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, next_window_start
+
+        w = DeployWindow(start="08:00", end="18:00", days=[1, 2, 3, 4, 5])
+        dt = datetime(2026, 6, 22, 20, 0, tzinfo=UTC)  # Monday 20:00
+        expected = datetime(2026, 6, 23, 8, 0, tzinfo=UTC)  # Tuesday
+        assert next_window_start(w, dt) == expected
+
+    def test_next_start_skip_weekend(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, next_window_start
+
+        w = DeployWindow(start="08:00", end="18:00", days=[1, 2, 3, 4, 5])
+        dt = datetime(2026, 6, 26, 20, 0, tzinfo=UTC)  # Friday 20:00
+        expected = datetime(2026, 6, 29, 8, 0, tzinfo=UTC)  # Monday
+        assert next_window_start(w, dt) == expected
+
+    def test_already_within_window(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, next_window_start
+
+        w = DeployWindow(start="08:00", end="18:00")
+        dt = datetime(2026, 6, 22, 10, 0, tzinfo=UTC)
+        assert next_window_start(w, dt) == dt
+
+    def test_next_start_wrapping_window(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, next_window_start
+
+        w = DeployWindow(start="22:00", end="06:00")
+        dt = datetime(2026, 6, 22, 20, 0, tzinfo=UTC)  # Monday 20:00
+        expected = datetime(2026, 6, 22, 22, 0, tzinfo=UTC)  # Monday 22:00
+        assert next_window_start(w, dt) == expected
+
+    def test_next_start_wrapping_window_after_end(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow, next_window_start
+
+        w = DeployWindow(start="22:00", end="06:00")
+        dt = datetime(2026, 6, 23, 10, 0, tzinfo=UTC)  # Tuesday 10:00
+        expected = datetime(2026, 6, 23, 22, 0, tzinfo=UTC)  # Tuesday 22:00
+        assert next_window_start(w, dt) == expected
