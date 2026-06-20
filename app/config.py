@@ -176,11 +176,29 @@ TargetConfig = Annotated[
 ]
 
 
+DnsMethod = Literal["git", "nsupdate"]
+
+
+class DnsUpdateConfig(BaseModel):
+    """DNS update via nsupdate (RFC 2136)."""
+
+    server: str = "127.0.0.1"
+    port: int = 53
+    key_name: str = "acme-key."
+    key_file: str | None = None
+    key_secret: str | None = None
+    key_algorithm: str = "hmac-sha256"
+    zone: str | None = None
+    ttl: int = 60
+
+
 class DnsConfig(BaseModel):
     nameservers: list[str] = ["8.8.8.8", "1.1.1.1"]
     timeout: int = 120
     poll_interval: int = 5
     wait_for_propagation: bool = False
+    method: DnsMethod = "git"
+    update: DnsUpdateConfig | None = None
 
 
 class PostQuantumConfig(BaseModel):
