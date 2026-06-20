@@ -33,7 +33,6 @@ COPY --from=build /usr/bin/git /usr/bin/git
 COPY --from=build /usr/libexec/git-core /usr/libexec/git-core
 COPY --from=build /usr/bin/ssh /usr/bin/ssh
 COPY --from=build /usr/bin/ssh-keygen /usr/bin/ssh-keygen
-COPY --from=build /usr/bin/ssh-keyscan /usr/bin/ssh-keyscan
 COPY --from=build /usr/lib/ssh /usr/lib/ssh
 
 COPY --from=build /usr/lib/python3.14/site-packages /usr/lib/python3.14/site-packages/
