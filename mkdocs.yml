@@ -1,9 +1,9 @@
-site_name: acme-git-webhook
+site_name: cert-renew
 site_description: ACME DNS-01 webhook that provisions certificates via Git-managed Bind zone files, stores them in Vault, deploys to F5/Ivanti/Exchange, and monitors expiration.
 site_author: Christophe Kyvra
-site_url: https://ckyvra.github.io/acme-git-webhook/
-repo_url: https://github.com/ckyvra/acme-git-webhook
-repo_name: ckyvra/acme-git-webhook
+site_url: https://ckyvra.github.io/cert-renew/
+repo_url: https://github.com/ckyvra/cert-renew
+repo_name: ckyvra/cert-renew
 edit_uri: edit/main/docs/
 
 theme:
@@ -63,7 +63,7 @@ plugins:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/ckyvra/acme-git-webhook
+      link: https://github.com/ckyvra/cert-renew
 
 markdown_extensions:
   - admonition

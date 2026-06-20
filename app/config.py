@@ -131,7 +131,7 @@ class WebhookConfig(BaseModel):
     """
 
     bind: str = "0.0.0.0:8000"
-    work_dir: str = "/data/acme-git-webhook"
+    work_dir: str = "/data/cert-renew"
     ssh_key: str | None = None
     known_hosts_path: str | None = None
 

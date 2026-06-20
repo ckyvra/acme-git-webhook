@@ -6,7 +6,7 @@ metadata:
   labels: {{ include "webhook.labels" . | nindent 4 }}
 spec:
   groups:
-    - name: acme-git-webhook
+    - name: cert-renew
       rules:
         - alert: CertificateExpiringSoon
           expr: acme_cert_expiry_days_left < 14

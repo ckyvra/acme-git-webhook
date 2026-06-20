@@ -23,7 +23,7 @@ EAB_HMAC_KEY="$2"
 EMAIL="$3"
 
 SERVER="https://emea.acme.atlas.globalsign.com/directory"
-CONFIG_DIR="/data/acme-git-webhook/letsencrypt"
+CONFIG_DIR="/data/cert-renew/letsencrypt"
 
 if [ -f "$CONFIG_DIR/accounts/acme.atlas.globalsign.com/directory" ]; then
     echo "ACME account already registered for GlobalSign."

@@ -1,4 +1,4 @@
-"""Prometheus metrics instrumentation for acme-git-webhook."""
+"""Prometheus metrics instrumentation for cert-renew."""
 
 from prometheus_client import Counter, Gauge, make_asgi_app
 

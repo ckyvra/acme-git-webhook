@@ -1,10 +1,10 @@
-# acme-git-webhook
+# cert-renew
 
-[![ci](https://github.com/ckyvra/acme-git-webhook/actions/workflows/ci.yml/badge.svg)](https://github.com/ckyvra/acme-git-webhook/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/ckyvra/acme-git-webhook/branch/main/graph/badge.svg)](https://codecov.io/gh/ckyvra/acme-git-webhook)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ckyvra/acme-git-webhook/badge)](https://scorecard.dev/viewer/?uri=github.com/ckyvra/acme-git-webhook)
-[![version](https://img.shields.io/github/v/tag/ckyvra/acme-git-webhook?label=version)](https://github.com/ckyvra/acme-git-webhook/tags)
-[![ghcr](https://img.shields.io/badge/GHCR-latest-blue?logo=docker)](https://github.com/ckyvra/acme-git-webhook/pkgs/container/acme-git-webhook)
+[![ci](https://github.com/ckyvra/cert-renew/actions/workflows/ci.yml/badge.svg)](https://github.com/ckyvra/cert-renew/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/ckyvra/cert-renew/branch/main/graph/badge.svg)](https://codecov.io/gh/ckyvra/cert-renew)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ckyvra/cert-renew/badge)](https://scorecard.dev/viewer/?uri=github.com/ckyvra/cert-renew)
+[![version](https://img.shields.io/github/v/tag/ckyvra/cert-renew?label=version)](https://github.com/ckyvra/cert-renew/tags)
+[![ghcr](https://img.shields.io/badge/GHCR-latest-blue?logo=docker)](https://github.com/ckyvra/cert-renew/pkgs/container/cert-renew)
 
 FastAPI webhook that provisions ACME DNS-01 challenges by adding/removing
 TXT records in Bind zone files stored in a Git repository, optionally
@@ -20,7 +20,7 @@ ACME client (certbot/acme.sh)
         │  POST /acme/cleanup { domain }
         │  POST /acme/deploy { domain, cert_pem, ... }
         ▼
-acme-git-webhook
+cert-renew
         │
         │  1. git pull
         │  2. dnspython: update zone file
@@ -295,7 +295,7 @@ Register once, then renew automatically.
 ```
 
 This runs `certbot register` with the GlobalSign endpoint and stores
-the account in `/data/acme-git-webhook/letsencrypt/accounts/`.
+the account in `/data/cert-renew/letsencrypt/accounts/`.
 
 ### 3. Issue the first certificate
 
@@ -306,7 +306,7 @@ certbot certonly \
   --manual-cleanup-hook 'curl -X POST http://localhost:8000/acme/cleanup -H "Authorization: Bearer <key>" -H "Content-Type: application/json" -d "{\"domain\": \"$CERTBOT_DOMAIN\"}"' \
   --deploy-hook /opt/deploy-hook.sh \
   --server https://emea.acme.atlas.globalsign.com/directory \
-  --config-dir /data/acme-git-webhook/letsencrypt \
+  --config-dir /data/cert-renew/letsencrypt \
   -d example.com -d "*.example.com"
 ```
 
@@ -320,7 +320,7 @@ monitor:
     certbot renew --cert-name {domain}
     --server https://emea.acme.atlas.globalsign.com/directory
     --deploy-hook /opt/deploy-hook.sh
-    --config-dir /data/acme-git-webhook/letsencrypt
+    --config-dir /data/cert-renew/letsencrypt
     --work-dir /tmp/certbot-work
     --logs-dir /tmp/certbot-logs
   renew_threshold: 14
@@ -350,7 +350,7 @@ from HashiCorp Vault via the **External Secrets Operator**. Populate a
 Vault secret at the path configured in `values.yaml`:
 
 ```hcl
-path "secret/data/acme-webhook" {
+path "secret/data/cert-renew" {
   capabilities = ["read"]
 }
 ```
@@ -366,13 +366,13 @@ Quick start:
 vim helm/values.yaml
 
 # 2. Install the chart — the ExternalSecret pulls secrets from Vault
-helm install acme-webhook ./helm
+helm install cert-renew ./helm
 
 # 3. The post-install Job registers the GlobalSign ACME account
-kubectl wait --for=condition=complete job/acme-webhook-acme-git-webhook-certbot-init --timeout=60s
+kubectl wait --for=condition=complete job/cert-renew-certbot-init --timeout=60s
 
 # 4. Verify
-kubectl get pods -l app.kubernetes.io/instance=acme-webhook
+kubectl get pods -l app.kubernetes.io/instance=cert-renew
 ```
 
 ### values.yaml overview

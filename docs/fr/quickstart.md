@@ -1,6 +1,6 @@
 # Démarrage rapide
 
-Ce guide vous permet de démarrer avec acme-git-webhook en quelques minutes.
+Ce guide vous permet de démarrer avec cert-renew en quelques minutes.
 
 ## Prérequis
 
@@ -44,8 +44,8 @@ vault:
 ```yaml
 # docker-compose.yml
 services:
-  acme-webhook:
-    image: ghcr.io/ckyvra/acme-git-webhook:latest
+  cert-renew:
+    image: ghcr.io/ckyvra/cert-renew:latest
     ports:
       - "8000:8000"
     volumes:

@@ -100,7 +100,7 @@ spec:
               mountPath: /app/config.yaml
               subPath: config.yaml
             - name: data
-              mountPath: /data/acme-git-webhook
+              mountPath: /data/cert-renew
             - name: deploy-key
               mountPath: /run/secrets/deploy_key
               subPath: deploy_key

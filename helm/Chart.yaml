@@ -1,5 +1,5 @@
 apiVersion: v2
-name: acme-git-webhook
+name: cert-renew
 description: ACME DNS-01 webhook with certbot, F5 Big-IP, and GlobalSign Atlas
 type: application
 version: 0.1.0
@@ -13,4 +13,4 @@ keywords:
   - big-ip
 maintainers:
   - name: ckyvra
-    url: https://github.com/ckyvra/acme-git-webhook
+    url: https://github.com/ckyvra/cert-renew

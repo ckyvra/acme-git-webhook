@@ -19,7 +19,7 @@ Utilisez le script fourni :
 ```
 
 Cette commande exécute `certbot register` avec l'endpoint GlobalSign
-et stocke le compte dans `/data/acme-git-webhook/letsencrypt/accounts/`.
+et stocke le compte dans `/data/cert-renew/letsencrypt/accounts/`.
 
 ### Contenu du script
 
@@ -35,7 +35,7 @@ certbot register \
   --eab-kid "$EAB_KID" \
   --eab-hmac-key "$EAB_HMAC" \
   --email "$EMAIL" \
-  --config-dir /data/acme-git-webhook/letsencrypt \
+  --config-dir /data/cert-renew/letsencrypt \
   --agree-tos \
   --no-eff-email
 ```
@@ -55,7 +55,7 @@ certbot certonly \
     -d "{\"domain\": \"$CERTBOT_DOMAIN\"}"' \
   --deploy-hook /opt/deploy-hook.sh \
   --server https://emea.acme.atlas.globalsign.com/directory \
-  --config-dir /data/acme-git-webhook/letsencrypt \
+  --config-dir /data/cert-renew/letsencrypt \
   -d example.com -d "*.example.com"
 ```
 
@@ -71,7 +71,7 @@ monitor:
     certbot renew --cert-name {domain}
     --server https://emea.acme.atlas.globalsign.com/directory
     --deploy-hook /opt/deploy-hook.sh
-    --config-dir /data/acme-git-webhook/letsencrypt
+    --config-dir /data/cert-renew/letsencrypt
     --work-dir /tmp/certbot-work
     --logs-dir /tmp/certbot-logs
   renew_threshold: 14
@@ -84,7 +84,7 @@ récupérés via External Secrets Operator :
 
 ```hcl
 # Politique Vault
-path "secret/data/acme-webhook" {
+path "secret/data/cert-renew" {
   capabilities = ["read"]
 }
 ```
@@ -101,10 +101,10 @@ Un Job post-installation enregistre automatiquement le compte ACME
 lors du premier déploiement Helm :
 
 ```bash
-helm install acme-webhook ./helm
+helm install cert-renew ./helm
 
 # Attendre l'enregistrement du compte ACME
-kubectl wait --for=condition=complete job/acme-webhook-acme-git-webhook-certbot-init --timeout=60s
+kubectl wait --for=condition=complete job/cert-renew-certbot-init --timeout=60s
 ```
 
 ## Alterner entre Let's Encrypt et GlobalSign

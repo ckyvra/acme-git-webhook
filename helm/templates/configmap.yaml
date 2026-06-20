@@ -9,7 +9,7 @@ data:
       api_keys: []
 
     webhook:
-      work_dir: "/data/acme-git-webhook/work"
+      work_dir: "/data/cert-renew/work"
       {{- if .Values.ssh.knownHosts }}
       known_hosts_path: "/run/secrets/known_hosts"
       {{- end }}

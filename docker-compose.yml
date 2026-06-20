@@ -7,7 +7,7 @@ services:
     volumes:
       - /path/to/deploy_key:/run/secrets/deploy_key:ro
       - /path/to/vault_secret_id:/run/secrets/vault_secret_id:ro
-      - webhook_data:/data/acme-git-webhook
+      - webhook_data:/data/cert-renew
     environment:
       - CONFIG_PATH=/app/config.yaml
       # Set a strong random key: python3 -c "import secrets; print(secrets.token_urlsafe(32))"

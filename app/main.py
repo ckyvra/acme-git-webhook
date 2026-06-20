@@ -176,7 +176,7 @@ async def lifespan(app: FastAPI):
         deploy_manager.close()
 
 
-app = FastAPI(title="acme-git-webhook", lifespan=lifespan)
+app = FastAPI(title="cert-renew", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
