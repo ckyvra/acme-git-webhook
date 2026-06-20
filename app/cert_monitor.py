@@ -18,7 +18,6 @@ from app.metrics import (
     cert_not_before_timestamp,
     cert_renewal_count,
     certs_total,
-    clear_cert_metrics,
 )
 from app.vault_handler import VaultHandler
 
@@ -114,7 +113,7 @@ class CertMonitor:
         now_ts = datetime.now(UTC).timestamp()
         logger.info("CertMonitor: renewing %s via %s", domain, cmd)
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603 — cmd is assembled from config, not user input
                 shlex.split(cmd),
                 timeout=self.config.renew_timeout,
                 capture_output=True,
@@ -180,27 +179,21 @@ class CertMonitor:
 
     def run_check(self) -> list[dict]:
         certs = self._load_certs_from_vault()
-        tracked = set()
         for cert in certs:
             domain = cert["domain"]
-            tracked.add(domain)
             days = cert.get("days_left")
             if days is not None and self.config is not None:
                 self._check_day_threshold(domain, days, metadata=cert.get("metadata"))
             cert_expiry_days_left.labels(domain=domain).set(days or -1)
             expiry_str = cert.get("expiry")
             if expiry_str:
-                cert_expiry_timestamp.labels(domain=domain).set(
-                    datetime.fromisoformat(expiry_str).timestamp()
-                )
+                cert_expiry_timestamp.labels(domain=domain).set(datetime.fromisoformat(expiry_str).timestamp())
             else:
                 cert_expiry_timestamp.labels(domain=domain).set(-1)
             metadata = cert.get("metadata") or {}
             not_before = metadata.get("not_before")
             if not_before and not_before != "unknown":
-                cert_not_before_timestamp.labels(domain=domain).set(
-                    datetime.fromisoformat(not_before).timestamp()
-                )
+                cert_not_before_timestamp.labels(domain=domain).set(datetime.fromisoformat(not_before).timestamp())
             stored_at = cert.get("stored_at") or ""
             cert_info.labels(domain=domain, stored_at=stored_at).set(1)
         self._latest_status = certs
