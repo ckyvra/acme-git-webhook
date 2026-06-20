@@ -8,7 +8,7 @@
 docker build -t ghcr.io/ckyvra/acme-git-webhook:latest .
 ```
 
-The Dockerfile is based on `python:3.12-slim` and includes `git`, `openssh-client`, and `certbot`.
+The Dockerfile uses a multi-stage build with Chainguard Python (free, ~0 CVEs) pinned to specific digests: `latest-dev` for building and `latest` for the minimal runtime image.
 
 ### Run
 
