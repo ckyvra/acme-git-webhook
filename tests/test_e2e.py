@@ -143,7 +143,7 @@ class TestFullAcmeChallengeFlow:
         assert "_acme-challenge.e2e-lifecycle" not in zone_clean
 
     def test_original_zone_preserved_after_clean(self, client: TestClient, tmp_path: Path, bare: Path):
-        zone_before = _clone_zone(bare, tmp_path / "original")
+        _clone_zone(bare, tmp_path / "original")
 
         domain = ACME_DOMAIN.format("e2e-preserve")
         client.post(
@@ -226,7 +226,7 @@ class TestE2EWithRealGitWire:
         assert all(r == 200 for r in results), results
 
         zone = _clone_zone(bare, tmp_path / "verify-concurrent")
-        for i in range(3):
+        for _ in range(3):
             assert VALIDATION in zone
 
 
@@ -255,5 +255,5 @@ class TestE2ESubdomainZoneResolution:
             assert resp.status_code == 200, resp.text
 
         zone = _clone_zone(bare, tmp_path / "verify-multi")
-        for i in range(3):
+        for _ in range(3):
             assert VALIDATION in zone
