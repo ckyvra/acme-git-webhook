@@ -9,7 +9,16 @@ from datetime import UTC, datetime
 import httpx
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from app.config import MonitorConfig, OpensslConfig
+from app.config import MonitorConfig, OpensslConfig, is_within_window, next_window_start
+from app.metrics import (
+    cert_expiry_days_left,
+    cert_expiry_timestamp,
+    cert_info,
+    cert_last_renewal_timestamp,
+    cert_not_before_timestamp,
+    cert_renewal_count,
+    certs_total,
+)
 from app.vault_handler import VaultHandler
 
 logger = logging.getLogger(__name__)
@@ -94,6 +103,30 @@ class CertMonitor:
     def _run_renew(self, domain: str) -> None:
         if self.config is None or not self.config.renew_command:
             return  # lgtm[py/clear-text-logging-sensitive-data]
+
+        window = self.config.deploy_window
+        if window and self._scheduler is not None:
+            now = datetime.now(UTC)
+            if not is_within_window(window, now):
+                next_time = next_window_start(window, now)
+                logger.info(
+                    "CertMonitor: deferring renew for %s until %s (window %s-%s %s)",
+                    domain,
+                    next_time,
+                    window.start,
+                    window.end,
+                    window.timezone,
+                )
+                self._scheduler.add_job(
+                    self._run_renew,
+                    trigger="date",
+                    run_date=next_time,
+                    args=[domain],
+                    id=f"renew-{domain}",
+                    replace_existing=True,
+                )
+                return
+
         cmd = self.config.renew_command.replace("{domain}", shlex.quote(domain))
         openssl = self._openssl
         if openssl:
@@ -101,23 +134,28 @@ class CertMonitor:
             cmd = cmd.replace("{key_size}", str(openssl.rsa_key_size))
             cmd = cmd.replace("{curve}", openssl.ecdsa_curve)
             cmd = cmd.replace("{sig_hash}", openssl.signature_hash)
+        now_ts = datetime.now(UTC).timestamp()
         logger.info("CertMonitor: renewing %s via %s", domain, cmd)
         try:
-            result = subprocess.run(shlex.split(cmd),
+            result = subprocess.run(
                 shlex.split(cmd),
                 timeout=self.config.renew_timeout,
                 capture_output=True,
                 text=True,
                 check=True,
             )
+            cert_last_renewal_timestamp.labels(domain=domain, status="success").set(now_ts)
+            cert_renewal_count.labels(domain=domain).inc()
             logger.info(
                 "CertMonitor: renewal succeeded for %s (rc=%d)",
                 domain,
                 result.returncode,
             )
         except subprocess.TimeoutExpired:
-            logger.error("CertMonitor: renewal timed out for %s", domain)  # noqa: S603
+            cert_last_renewal_timestamp.labels(domain=domain, status="failure").set(now_ts)
+            logger.error("CertMonitor: renewal timed out for %s", domain)
         except subprocess.CalledProcessError as e:
+            cert_last_renewal_timestamp.labels(domain=domain, status="failure").set(now_ts)
             logger.error(
                 "CertMonitor: renewal failed for %s (rc=%d)",
                 domain,
@@ -166,10 +204,38 @@ class CertMonitor:
     def run_check(self) -> list[dict]:
         certs = self._load_certs_from_vault()
         for cert in certs:
+            domain = cert["domain"]
             days = cert.get("days_left")
             if days is not None and self.config is not None:
-                self._check_day_threshold(cert["domain"], days, metadata=cert.get("metadata"))
+                self._check_day_threshold(domain, days, metadata=cert.get("metadata"))
+            cert_expiry_days_left.labels(domain=domain).set(days or -1)
+            expiry_str = cert.get("expiry")
+            if expiry_str:
+                cert_expiry_timestamp.labels(domain=domain).set(datetime.fromisoformat(expiry_str).timestamp())
+            else:
+                cert_expiry_timestamp.labels(domain=domain).set(-1)
+            metadata = cert.get("metadata") or {}
+            not_before = metadata.get("not_before")
+            if not_before and not_before != "unknown":
+                cert_not_before_timestamp.labels(domain=domain).set(datetime.fromisoformat(not_before).timestamp())
+            stored_at = cert.get("stored_at") or ""
+            cert_info.labels(domain=domain, stored_at=stored_at).set(1)
         self._latest_status = certs
+        statuses = {"valid": 0, "warning": 0, "critical": 0, "expired": 0}
+        for cert in certs:
+            days = cert.get("days_left")
+            if days is None:
+                statuses["expired"] += 1
+            elif days <= 0:
+                statuses["expired"] += 1
+            elif days <= 14:
+                statuses["critical"] += 1
+            elif days <= 60:
+                statuses["warning"] += 1
+            else:
+                statuses["valid"] += 1
+        for status, count in statuses.items():
+            certs_total.labels(status=status).set(count)
         logger.info("CertMonitor: checked %d certificates", len(certs))
         return certs
 

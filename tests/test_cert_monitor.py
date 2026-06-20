@@ -521,3 +521,52 @@ class TestExtractNotBeforeDirect:
         ):
             result = _extract_not_before("invalid-pem")
             assert result is None
+
+
+class TestCertMonitorDeployWindow:
+    def test_run_renew_deferred_outside_window(self):
+        from datetime import UTC, datetime
+
+        from app.config import DeployWindow
+
+        window = DeployWindow(start="08:00", end="18:00", days=[1, 2, 3, 4, 5])
+        config = MonitorConfig(renew_command="echo renew", deploy_window=window)
+        monitor = CertMonitor(config, MagicMock())
+        monitor._scheduler = MagicMock()
+
+        with patch("app.cert_monitor.is_within_window", return_value=False), patch("app.cert_monitor.next_window_start") as mock_next:
+            mock_next.return_value = datetime(2026, 6, 22, 8, 0, tzinfo=UTC)
+            monitor._run_renew("example.com")
+
+        assert monitor._scheduler.add_job.called
+        _, kwargs = monitor._scheduler.add_job.call_args
+        assert kwargs["trigger"] == "date"
+        assert kwargs["run_date"] == datetime(2026, 6, 22, 8, 0, tzinfo=UTC)
+        assert kwargs["args"] == ["example.com"]
+
+    def test_run_renew_immediate_within_window(self):
+        from app.config import DeployWindow
+
+        window = DeployWindow(start="08:00", end="18:00", days=[1, 2, 3, 4, 5])
+        config = MonitorConfig(renew_command="echo renew", deploy_window=window)
+        monitor = CertMonitor(config, MagicMock())
+        monitor._scheduler = MagicMock()
+
+        with patch("app.cert_monitor.is_within_window", return_value=True):
+            with patch.object(monitor, "_run_renew", wraps=monitor._run_renew) as spy:
+                with patch("subprocess.run") as mock_run:
+                    mock_run.return_value = MagicMock(returncode=0)
+                    spy("example.com")
+
+        assert not monitor._scheduler.add_job.called
+
+    def test_run_renew_no_window_deploys_immediately(self):
+        config = MonitorConfig(renew_command="echo renew")
+        monitor = CertMonitor(config, MagicMock())
+        monitor._scheduler = MagicMock()
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            monitor._run_renew("example.com")
+
+        assert not monitor._scheduler.add_job.called

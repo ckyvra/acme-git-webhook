@@ -1,11 +1,105 @@
 import logging
 import os
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
+from zoneinfo import ZoneInfo
 
 import yaml
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
+
+class DeployWindow(BaseModel):
+    """Time window during which certificate renewal and deployment are allowed.
+
+    When configured, renewal (via CertMonitor) and deployment to targets
+    will only proceed if the current time falls within the window on an
+    allowed day. Outside the window, operations are deferred to the next
+    window opening.
+
+    Attributes:
+        start: Window opening time in ``HH:MM`` 24-hour format (e.g. ``"08:00"``).
+        end: Window closing time in ``HH:MM`` 24-hour format (e.g. ``"18:00"``).
+            Supports wrapping past midnight (e.g. ``"22:00"`` → ``"06:00"``).
+        days: Days of the week the window applies to, where ``1`` = Monday
+            and ``7`` = Sunday (default: all days).
+        timezone: IANA timezone name (e.g. ``"Europe/Paris"``, ``"America/New_York"``).
+    """
+
+    start: str
+    end: str
+    days: list[int] = Field(default=[1, 2, 3, 4, 5, 6, 7])
+    timezone: str = "UTC"
+
+
+def _window_start_end(
+    window: DeployWindow,
+    dt: datetime,
+) -> tuple[datetime, datetime]:
+    """Return the (start, end) datetimes for the current day in the window's timezone."""
+    tz = ZoneInfo(window.timezone)
+    local = dt.astimezone(tz)
+    start_h, start_m = map(int, window.start.split(":"))
+    end_h, end_m = map(int, window.end.split(":"))
+    day_start = local.replace(hour=0, minute=0, second=0, microsecond=0)
+    win_start = day_start.replace(hour=start_h, minute=start_m)
+    win_end = day_start.replace(hour=end_h, minute=end_m)
+    return win_start, win_end
+
+
+def is_within_window(window: DeployWindow, dt: datetime | None = None) -> bool:
+    """Check whether *dt* falls within the deploy window."""
+    if dt is None:
+        dt = datetime.now(UTC)
+    tz = ZoneInfo(window.timezone)
+    local = dt.astimezone(tz)
+
+    if local.isoweekday() not in window.days:
+        return False
+
+    win_start, win_end = _window_start_end(window, dt)
+    start_h, start_m = map(int, window.start.split(":"))
+    end_h, end_m = map(int, window.end.split(":"))
+    wraps = start_h > end_h or (start_h == end_h and start_m > end_m)
+
+    if wraps:
+        return local >= win_start or local < win_end
+    return win_start <= local < win_end
+
+
+def next_window_start(window: DeployWindow, dt: datetime | None = None) -> datetime:
+    """Return the nearest datetime when the window opens.
+
+    If *dt* is already within the window, returns *dt* unchanged.
+    """
+    if dt is None:
+        dt = datetime.now(UTC)
+
+    if is_within_window(window, dt):
+        return dt
+
+    tz = ZoneInfo(window.timezone)
+    local = dt.astimezone(tz)
+    win_start, _ = _window_start_end(window, dt)
+
+    local_mins = local.hour * 60 + local.minute
+    start_mins = win_start.hour * 60 + win_start.minute
+    end_h, end_m = map(int, window.end.split(":"))
+    end_mins = end_h * 60 + end_m
+    wraps = start_mins > end_mins
+
+    if wraps or local_mins < start_mins:
+        candidate_local = win_start
+    else:
+        candidate_local = win_start + timedelta(days=1)
+
+    for _ in range(14):
+        if candidate_local.isoweekday() in window.days:
+            return candidate_local.astimezone(UTC)
+        candidate_local += timedelta(days=1)
+
+    return candidate_local.astimezone(UTC)
 
 
 class AuthConfig(BaseModel):
@@ -112,6 +206,7 @@ class F5TargetConfig(BaseModel):
     password_path: str
     verify: bool = True
     timeout: int = 30
+    deploy_window: DeployWindow | None = None
 
 
 class IvantiTargetConfig(BaseModel):
@@ -138,6 +233,7 @@ class IvantiTargetConfig(BaseModel):
     external_ports: list[str] = []
     management_interface: bool = False
     timeout: int = 60
+    deploy_window: DeployWindow | None = None
 
 
 class ExchangeTargetConfig(BaseModel):
@@ -166,6 +262,7 @@ class ExchangeTargetConfig(BaseModel):
     remote_path: str = "C:\\certs"
     services: str = "SMTP"
     timeout: int = 120
+    deploy_window: DeployWindow | None = None
 
 
 # Discriminated union so Pydantic selects the correct model based on
@@ -223,6 +320,7 @@ class MonitorConfig(BaseModel):
     renew_timeout: int = 300
     renew_threshold: int = 14
     renew_percentage: int | None = None
+    deploy_window: DeployWindow | None = None
 
 
 class AppConfig(BaseModel):

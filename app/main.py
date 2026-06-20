@@ -139,7 +139,8 @@ async def lifespan(app: FastAPI):
         vault_handler = VaultHandler(config.vault)
 
     if config.targets:
-        deploy_manager = DeployManager(config.targets)
+        default_window = config.monitor.deploy_window if config.monitor else None
+        deploy_manager = DeployManager(config.targets, default_window=default_window)
 
     if config.monitor:
         cert_monitor = CertMonitor(config.monitor, vault_handler, openssl=config.openssl)

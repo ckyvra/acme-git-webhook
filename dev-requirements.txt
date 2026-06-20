@@ -10,3 +10,4 @@ mypy>=1.15,<2
 pre-commit>=4.0,<5
 types-PyYAML
 types-hvac
+pip-audit==2.8.0
