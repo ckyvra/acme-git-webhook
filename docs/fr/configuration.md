@@ -71,7 +71,7 @@ repo:
   zone_file_suffix: ".zone"
   deploy_key_path: "/run/secrets/deploy_key"
   known_hosts_path: "/run/secrets/known_hosts"
-  git_user_name: "acme-git-webhook"
+  git_user_name: "cert-renew"
   git_user_email: "webhook@example.com"
 ```
 
@@ -83,7 +83,7 @@ repo:
 | `zone_file_suffix` | `str` | `".zone"` | Suffixe des fichiers de zone |
 | `deploy_key_path` | `str` | `"/run/secrets/deploy_key"` | Chemin vers la clé SSH de déploiement |
 | `known_hosts_path` | `Optional[str]` | `None` | Chemin vers le fichier known_hosts |
-| `git_user_name` | `str` | `"acme-git-webhook"` | Nom pour les commits |
+| `git_user_name` | `str` | `"cert-renew"` | Nom pour les commits |
 | `git_user_email` | `str` | `"webhook@example.com"` | Email pour les commits |
 
 !!! tip "Résolution des zones"

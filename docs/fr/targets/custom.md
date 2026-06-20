@@ -1,6 +1,6 @@
 # Cible personnalisée
 
-Vous pouvez étendre acme-git-webhook en écrivant votre propre cible de
+Vous pouvez étendre cert-renew en écrivant votre propre cible de
 déploiement. Il suffit d'implémenter l'interface `DeployTarget` et
 d'enregistrer la classe via le système de plugins.
 

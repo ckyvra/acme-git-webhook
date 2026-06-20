@@ -29,7 +29,7 @@ class TestWebhookConfig:
     def test_defaults(self):
         cfg = WebhookConfig()
         assert cfg.bind == "0.0.0.0:8000"
-        assert cfg.work_dir == "/data/acme-git-webhook"
+        assert cfg.work_dir == "/data/cert-renew"
         assert cfg.ssh_key is None
         assert cfg.known_hosts_path is None
 

@@ -2,23 +2,23 @@ header:
   schema-version: 2.0.0
   last-updated: "2026-06-20"
   last-reviewed: "2026-06-20"
-  commit-history: https://github.com/ckyvra/acme-git-webhook/commits/main
-  changelog: https://github.com/ckyvra/acme-git-webhook/releases
+  commit-history: https://github.com/ckyvra/cert-renew/commits/main
+  changelog: https://github.com/ckyvra/cert-renew/releases
 
 project:
-  name: acme-git-webhook
+  name: cert-renew
   description: ACME DNS-challenge webhook with multi-target deployment
-  repository: https://github.com/ckyvra/acme-git-webhook
-  license: https://github.com/ckyvra/acme-git-webhook/blob/main/LICENSE
-  documentation: https://ckyvra.github.io/acme-git-webhook
+  repository: https://github.com/ckyvra/cert-renew
+  license: https://github.com/ckyvra/cert-renew/blob/main/LICENSE
+  documentation: https://ckyvra.github.io/cert-renew
 
 security:
   security-advisory:
     private: true
     severity: high
-    url: https://github.com/ckyvra/acme-git-webhook/security/advisories
+    url: https://github.com/ckyvra/cert-renew/security/advisories
   vulnerability-reporting:
-    url: https://github.com/ckyvra/acme-git-webhook/security/advisories/new
+    url: https://github.com/ckyvra/cert-renew/security/advisories/new
     acknowledgment: 48h
     methods:
       - GitHub Security Advisory
@@ -30,4 +30,4 @@ authentication:
 publish:
   docker:
     registry: ghcr.io
-    url: https://github.com/ckyvra/acme-git-webhook/pkgs/container/acme-git-webhook
+    url: https://github.com/ckyvra/cert-renew/pkgs/container/cert-renew

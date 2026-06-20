@@ -1,6 +1,6 @@
-# acme-git-webhook
+# cert-renew
 
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ckyvra/acme-git-webhook/badge)](https://scorecard.dev/viewer/?uri=github.com/ckyvra/acme-git-webhook)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ckyvra/cert-renew/badge)](https://scorecard.dev/viewer/?uri=github.com/ckyvra/cert-renew)
 
 FastAPI webhook that provisions ACME DNS-01 challenges via Git-managed Bind zone files, stores certificates in HashiCorp Vault, deploys them to network appliances (F5 Big-IP, Ivanti VPN, Exchange SMTP), and monitors expiration with optional auto-renewal.
 
@@ -12,7 +12,7 @@ Most ACME DNS-01 workflows require a DNS provider with a REST API. If you run au
 
 ```mermaid
 flowchart LR
-    ACME["ACME Client<br/>(certbot / acme.sh)"] -->|POST /acme/auth| WH["acme-git-webhook"]
+    ACME["ACME Client<br/>(certbot / acme.sh)"] -->|POST /acme/auth| WH["cert-renew"]
     ACME -->|POST /acme/cleanup| WH
     ACME -->|POST /acme/deploy| WH
 

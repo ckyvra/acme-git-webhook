@@ -37,13 +37,13 @@ certbot register \
     --eab-hmac-key "$EAB_HMAC_KEY" \
     --email "$EMAIL" \
     --agree-tos \
-    --config-dir /data/acme-git-webhook/letsencrypt \
+    --config-dir /data/cert-renew/letsencrypt \
     --work-dir /tmp/certbot-work \
     --logs-dir /tmp/certbot-logs \
     -n
 ```
 
-The account is stored in `/data/acme-git-webhook/letsencrypt/accounts/`. Subsequent renewals do **not** need EAB credentials.
+The account is stored in `/data/cert-renew/letsencrypt/accounts/`. Subsequent renewals do **not** need EAB credentials.
 
 ## 3. Issue the first certificate manually
 
@@ -60,7 +60,7 @@ certbot certonly \
         -d "{\"domain\": \"$CERTBOT_DOMAIN\"}"' \
     --deploy-hook /opt/deploy-hook.sh \
     --server https://emea.acme.atlas.globalsign.com/directory \
-    --config-dir /data/acme-git-webhook/letsencrypt \
+    --config-dir /data/cert-renew/letsencrypt \
     -d example.com -d "*.example.com"
 ```
 
@@ -74,7 +74,7 @@ monitor:
     certbot renew --cert-name {domain}
     --server https://emea.acme.atlas.globalsign.com/directory
     --deploy-hook /opt/deploy-hook.sh
-    --config-dir /data/acme-git-webhook/letsencrypt
+    --config-dir /data/cert-renew/letsencrypt
     --work-dir /tmp/certbot-work
     --logs-dir /tmp/certbot-logs
   renew_threshold: 14

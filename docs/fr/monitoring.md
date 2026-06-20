@@ -15,7 +15,7 @@ monitor:
     certbot renew --cert-name {domain}
     --server https://emea.acme.atlas.globalsign.com/directory
     --deploy-hook /opt/deploy-hook.sh
-    --config-dir /data/acme-git-webhook/letsencrypt
+    --config-dir /data/cert-renew/letsencrypt
     --work-dir /tmp/certbot-work
     --logs-dir /tmp/certbot-logs
   renew_threshold: 14
@@ -122,7 +122,7 @@ monitor:
     certbot renew --cert-name {domain}
     --server https://emea.acme.atlas.globalsign.com/directory
     --deploy-hook /opt/deploy-hook.sh
-    --config-dir /data/acme-git-webhook/letsencrypt
+    --config-dir /data/cert-renew/letsencrypt
   renew_threshold: 14
 ```
 

@@ -45,5 +45,5 @@ spec:
                   key: acme_email
           volumeMounts:
             - name: data
-              mountPath: /data/acme-git-webhook
+              mountPath: /data/cert-renew
 {{- end }}

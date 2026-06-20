@@ -1,5 +1,5 @@
 #!/bin/bash
-# Certbot deploy hook for acme-git-webhook
+# Certbot deploy hook for cert-renew
 # Called by certbot after a successful renewal.
 # Certbot sets RENEWED_DOMAINS and RENEWED_LINEAGE.
 

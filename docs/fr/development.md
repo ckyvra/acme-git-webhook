@@ -10,8 +10,8 @@
 
 ```bash
 # Cloner le dépôt
-git clone https://github.com/ckyvra/acme-git-webhook.git
-cd acme-git-webhook
+git clone https://github.com/ckyvra/cert-renew.git
+cd cert-renew
 
 # Créer l'environnement virtuel et installer les dépendances
 python -m venv .venv
@@ -64,7 +64,7 @@ make check   # lint + tests
 ## Structure du projet
 
 ```
-acme-git-webhook/
+cert-renew/
 ├── acme_webhook/
 │   ├── __init__.py
 │   ├── main.py              # Application FastAPI

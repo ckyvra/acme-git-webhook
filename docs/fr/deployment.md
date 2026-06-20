@@ -5,8 +5,8 @@
 ```yaml
 # docker-compose.yml
 services:
-  acme-webhook:
-    image: ghcr.io/ckyvra/acme-git-webhook:latest
+  cert-renew:
+    image: ghcr.io/ckyvra/cert-renew:latest
     ports:
       - "8000:8000"
     volumes:
@@ -50,13 +50,13 @@ Un chart Helm est disponible dans le répertoire `helm/`.
 vim helm/values.yaml
 
 # 2. Installer le chart
-helm install acme-webhook ./helm
+helm install cert-renew ./helm
 
 # 3. Attendre l'enregistrement du compte ACME (GlobalSign)
-kubectl wait --for=condition=complete job/acme-webhook-acme-git-webhook-certbot-init --timeout=60s
+kubectl wait --for=condition=complete job/cert-renew-certbot-init --timeout=60s
 
 # 4. Vérifier
-kubectl get pods -l app.kubernetes.io/instance=acme-webhook
+kubectl get pods -l app.kubernetes.io/instance=cert-renew
 ```
 
 ### Structure de `values.yaml`
@@ -78,7 +78,7 @@ kubectl get pods -l app.kubernetes.io/instance=acme-webhook
 Le secret Vault doit contenir les propriétés suivantes :
 
 ```hcl
-path "secret/data/acme-webhook" {
+path "secret/data/cert-renew" {
   capabilities = ["read"]
 }
 ```

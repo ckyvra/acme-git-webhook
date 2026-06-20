@@ -34,7 +34,7 @@ def _docker_available() -> bool:
 
 def _start_vault_dev() -> tuple[subprocess.Popen, str, str]:
     """Start a Vault dev server in Docker and return (process, addr, root_token)."""
-    container_name = "acme-webhook-vault-dev"
+    container_name = "cert-renew-vault-dev"
     subprocess.run(
         ["docker", "rm", "-f", container_name],
         capture_output=True,

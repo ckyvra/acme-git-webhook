@@ -10,7 +10,7 @@ auth:
 
 webhook:
   bind: "0.0.0.0:8000"          # Listen address:port
-  work_dir: "/data/acme-git-webhook"   # Working directory (cloned repo, lock file)
+  work_dir: "/data/cert-renew"   # Working directory (cloned repo, lock file)
   ssh_key: "/run/secrets/deploy_key"   # Git deploy key (mounted file, optional)
 
 # ── Git repository (Bind zone files) ────────────────────────────────────
@@ -84,9 +84,9 @@ vault:
 #   check_interval_hours: 24          # How often to check
 #   warn_days: [60, 30, 14, 7, 3, 1]  # Thresholds (descending order)
 #   alert_webhook_url: "https://hooks.slack.com/services/xxx"
-#   renew_command: "certbot renew --cert-name {domain} --key-type {key_type} --rsa-key-size {key_size} --elliptic-curve {curve} --deploy-hook /opt/deploy-hook.sh --config-dir /data/acme-git-webhook/letsencrypt --work-dir /tmp/certbot-work --logs-dir /tmp/certbot-logs"
+#   renew_command: "certbot renew --cert-name {domain} --key-type {key_type} --rsa-key-size {key_size} --elliptic-curve {curve} --deploy-hook /opt/deploy-hook.sh --config-dir /data/cert-renew/letsencrypt --work-dir /tmp/certbot-work --logs-dir /tmp/certbot-logs"
 #   # GlobalSign example (requires EAB registration first, see scripts/register-acme.sh):
-#   # renew_command: "certbot renew --cert-name {domain} --key-type {key_type} --rsa-key-size {key_size} --elliptic-curve {curve} --server https://emea.acme.atlas.globalsign.com/directory --deploy-hook /opt/deploy-hook.sh --config-dir /data/acme-git-webhook/letsencrypt --work-dir /tmp/certbot-work --logs-dir /tmp/certbot-logs"
+#   # renew_command: "certbot renew --cert-name {domain} --key-type {key_type} --rsa-key-size {key_size} --elliptic-curve {curve} --server https://emea.acme.atlas.globalsign.com/directory --deploy-hook /opt/deploy-hook.sh --config-dir /data/cert-renew/letsencrypt --work-dir /tmp/certbot-work --logs-dir /tmp/certbot-logs"
 #   renew_timeout: 300                # Max seconds for renewal command
 #   renew_threshold: 14               # Days before expiry to auto-renew
 #   renew_percentage: 15              # Alternative: renew when <=15% of cert lifetime remains

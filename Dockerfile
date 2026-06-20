@@ -12,7 +12,7 @@ COPY scripts/ ./scripts/
 COPY config.yaml .
 COPY --chmod=+x scripts/deploy-hook.sh /opt/deploy-hook.sh
 
-RUN mkdir -p /data/acme-git-webhook/letsencrypt && \
+RUN mkdir -p /data/cert-renew/letsencrypt && \
     addgroup --system app && adduser --system --ingroup app app && \
     chown -R app:app /app /data
 

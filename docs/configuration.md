@@ -13,7 +13,7 @@ The application is configured via a single `config.yaml` file. The path is read 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `bind` | `str` | `"0.0.0.0:8000"` | Host and port the FastAPI server listens on. |
-| `work_dir` | `str` | `"/data/acme-git-webhook"` | Local directory for cloning the zone repository and storing the inter-process lock file. |
+| `work_dir` | `str` | `"/data/cert-renew"` | Local directory for cloning the zone repository and storing the inter-process lock file. |
 | `ssh_key` | `str` | `null` | Path to a deploy SSH key (mounted file). When set, GitPython uses this key instead of the default SSH agent. |
 
 ## `repo`

@@ -13,7 +13,7 @@ Only the latest release is supported with security updates.
 
 To report a security vulnerability, please open a **GitHub Security Advisory** at:
 
-https://github.com/ckyvra/acme-git-webhook/security/advisories/new
+https://github.com/ckyvra/cert-renew/security/advisories/new
 
 We will acknowledge receipt within **48 hours** and provide a timeline for
 resolution. Please do **not** disclose the vulnerability publicly until we

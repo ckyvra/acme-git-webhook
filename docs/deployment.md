@@ -5,7 +5,7 @@
 ### Build
 
 ```bash
-docker build -t ghcr.io/ckyvra/acme-git-webhook:latest .
+docker build -t ghcr.io/ckyvra/cert-renew:latest .
 ```
 
 The Dockerfile uses a multi-stage build with Chainguard Python (free, ~0 CVEs) pinned to specific digests: `latest-dev` for building and `latest` for the minimal runtime image.
@@ -14,13 +14,13 @@ The Dockerfile uses a multi-stage build with Chainguard Python (free, ~0 CVEs) p
 
 ```bash
 docker run -d \
-  --name acme-webhook \
+  --name cert-renew \
   -p 8000:8000 \
   -v /path/to/config.yaml:/app/config.yaml:ro \
   -v /path/to/deploy_key:/run/secrets/deploy_key:ro \
-  -v webhook_data:/data/acme-git-webhook \
+  -v webhook_data:/data/cert-renew \
   -e CONFIG_PATH=/app/config.yaml \
-  ghcr.io/ckyvra/acme-git-webhook:latest
+  ghcr.io/ckyvra/cert-renew:latest
 ```
 
 ## Docker Compose
@@ -35,7 +35,7 @@ services:
     volumes:
       - /path/to/deploy_key:/run/secrets/deploy_key:ro
       - /path/to/vault_secret_id:/run/secrets/vault_secret_id:ro
-      - webhook_data:/data/acme-git-webhook
+      - webhook_data:/data/cert-renew
     environment:
       - CONFIG_PATH=/app/config.yaml
       - ACME_WEBHOOK_API_KEY=your-api-key-here
@@ -68,7 +68,7 @@ A Helm chart is available in the `helm/` directory for Kubernetes deployment.
 | `image.*` | Container image repository, tag, pull policy |
 | `externalSecret.*` | ESO SecretStore reference and Vault path for secrets |
 | `externalSecret.secretStore` | Name and kind (`ClusterSecretStore` or `SecretStore`) |
-| `externalSecret.vault.path` | Vault path for the external secret (default: `secret/data/acme-webhook`) |
+| `externalSecret.vault.path` | Vault path for the external secret (default: `secret/data/cert-renew`) |
 | `repo.*` | Git URL, branch, zone path, zone file suffix |
 | `vault.*` | Vault address, AppRole `roleId`, KV mount, certs path, TLS verify |
 | `dns.*` | Nameservers, timeout, poll interval, auto-propagation toggle |
@@ -86,14 +86,14 @@ A Helm chart is available in the `helm/` directory for Kubernetes deployment.
 vim helm/values.yaml
 
 # 2. Install the chart — the ExternalSecret pulls secrets from Vault
-helm install acme-webhook ./helm
+helm install cert-renew ./helm
 
 # 3. Wait for the GlobalSign registration Job (if enabled)
 kubectl wait --for=condition=complete \
-  job/acme-webhook-acme-git-webhook-certbot-init --timeout=60s
+  job/cert-renew-certbot-init --timeout=60s
 
 # 4. Verify
-kubectl get pods -l app.kubernetes.io/instance=acme-webhook
+kubectl get pods -l app.kubernetes.io/instance=cert-renew
 ```
 
 ### Required Vault secret
@@ -113,7 +113,7 @@ The Vault secret at the path specified in `externalSecret.vault.path` must conta
 Vault policy:
 
 ```hcl
-path "secret/data/acme-webhook" {
+path "secret/data/cert-renew" {
   capabilities = ["read"]
 }
 ```

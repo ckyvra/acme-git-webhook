@@ -15,7 +15,7 @@ monitor:
     certbot renew --cert-name {domain}
     --key-type {key_type} --elliptic-curve {curve}
     --deploy-hook /opt/deploy-hook.sh
-    --config-dir /data/acme-git-webhook/letsencrypt
+    --config-dir /data/cert-renew/letsencrypt
     --work-dir /tmp/certbot-work
     --logs-dir /tmp/certbot-logs
   renew_timeout: 300

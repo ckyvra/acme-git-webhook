@@ -3,7 +3,7 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/ckyvra/acme-git-webhook
+  repository: ghcr.io/ckyvra/cert-renew
   tag: latest
   pullPolicy: Always
 
@@ -21,7 +21,7 @@ externalSecret:
     name: vault-backend
     kind: ClusterSecretStore
   vault:
-    path: secret/data/acme-webhook
+    path: secret/data/cert-renew
 
 # ── Git repository (Bind zone files) ───────────────────────────────
 
@@ -109,7 +109,7 @@ monitor:
     certbot renew --cert-name {domain}
     --server https://emea.acme.atlas.globalsign.com/directory
     --deploy-hook /opt/deploy-hook.sh
-    --config-dir /data/acme-git-webhook/letsencrypt
+    --config-dir /data/cert-renew/letsencrypt
     --work-dir /tmp/certbot-work
     --logs-dir /tmp/certbot-logs
   renewTimeout: 300
@@ -137,7 +137,7 @@ acme:
 
 ingress:
   enabled: true
-  host: "acme-webhook.example.com"
+  host: "cert-renew.example.com"
   className: "nginx"
   tls:
     enabled: true

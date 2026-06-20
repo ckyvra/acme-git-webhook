@@ -2,7 +2,7 @@ VENV = /tmp/acme-test-venv
 PYTHON = $(VENV)/bin/python3
 PYTEST = $(VENV)/bin/pytest
 
-IMAGE = ghcr.io/ckyvra/acme-git-webhook
+IMAGE = ghcr.io/ckyvra/cert-renew
 GIT_SHA = $(shell git rev-parse --short HEAD)
 TAG ?= latest
 
