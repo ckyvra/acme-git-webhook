@@ -50,6 +50,24 @@ spec:
                 path: f5_password
                 mode: 0400
         {{- end }}
+        {{- if .Values.ivanti.enabled }}
+        - name: ivanti-api-key
+          secret:
+            secretName: {{ include "webhook.fullname" . }}
+            items:
+              - key: ivanti_api_key
+                path: ivanti_api_key
+                mode: 0400
+        {{- end }}
+        {{- if .Values.exchange.enabled }}
+        - name: exchange-password
+          secret:
+            secretName: {{ include "webhook.fullname" . }}
+            items:
+              - key: exchange_password
+                path: exchange_password
+                mode: 0400
+        {{- end }}
 
       containers:
         - name: webhook
@@ -100,6 +118,16 @@ spec:
             - name: f5-password
               mountPath: /run/secrets/f5_password
               subPath: f5_password
+            {{- end }}
+            {{- if .Values.ivanti.enabled }}
+            - name: ivanti-api-key
+              mountPath: /run/secrets/ivanti_api_key
+              subPath: ivanti_api_key
+            {{- end }}
+            {{- if .Values.exchange.enabled }}
+            - name: exchange-password
+              mountPath: /run/secrets/exchange_password
+              subPath: exchange_password
             {{- end }}
 
           livenessProbe:

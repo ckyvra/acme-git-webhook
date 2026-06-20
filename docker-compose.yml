@@ -10,7 +10,8 @@ services:
       - webhook_data:/data/acme-git-webhook
     environment:
       - CONFIG_PATH=/app/config.yaml
-      - ACME_WEBHOOK_API_KEY=your-api-key-here
+      # Set a strong random key: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+      - ACME_WEBHOOK_API_KEY=
       - ACME_WEBHOOK_URL=http://localhost:8000
 
 volumes:

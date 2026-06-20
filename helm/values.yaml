@@ -75,6 +75,29 @@ f5:
       username: "admin"
       verify: true
 
+# ── Ivanti Connect Secure VPN (optional) ───────────────────────────
+
+ivanti:
+  enabled: false
+  hosts:
+    - addr: "https://vpn.example.com"
+      verify: true
+      internalPorts: []
+      externalPorts: []
+      managementInterface: false
+
+# ── Exchange SMTP / WinRM (optional) ──────────────────────────────
+
+exchange:
+  enabled: false
+  hosts:
+    - addr: "https://exchange.example.com:5986"
+      transport: ntlm
+      username: "DOMAIN\\user"
+      verify: true
+      remotePath: "C:\\certs"
+      services: "SMTP"
+
 # ── Certificate monitor & auto-renewal (optional) ──────────────────
 
 monitor:
@@ -120,6 +143,16 @@ persistence:
 service:
   port: 8000
   type: ClusterIP
+
+# ── Prometheus monitoring (optional) ──────────────────────────────
+
+monitoring:
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    additionalLabels: {}
+  prometheusRule:
+    enabled: false
 
 # ── Resources ──────────────────────────────────────────────────────
 
