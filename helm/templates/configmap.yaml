@@ -39,16 +39,48 @@ data:
       wait_for_propagation: {{ .Values.dns.waitForPropagation }}
     {{- end }}
 
-    {{- if .Values.f5.enabled }}
     targets:
-      {{- range .Values.f5.hosts }}
-      - provider: f5
+    {{- if .Values.f5.enabled }}
+    {{- range .Values.f5.hosts }}
+      - name: f5-{{ .addr | replace "https://" "" | replace "http://" "" | replace "." "-" | replace ":" "-" }}
+        provider: f5
         addr: {{ .addr | quote }}
         username: {{ .username | quote }}
         password_path: "/run/secrets/f5_password"
         verify: {{ .verify }}
         timeout: 30
-      {{- end }}
+    {{- end }}
+    {{- end }}
+    {{- if .Values.ivanti.enabled }}
+    {{- range .Values.ivanti.hosts }}
+      - name: ivanti-{{ .addr | replace "https://" "" | replace "http://" "" | replace "." "-" | replace ":" "-" }}
+        provider: ivanti
+        addr: {{ .addr | quote }}
+        api_key_path: "/run/secrets/ivanti_api_key"
+        verify: {{ .verify }}
+        {{- if .internalPorts }}
+        internal_ports: {{ toYaml .internalPorts | nindent 8 }}
+        {{- end }}
+        {{- if .externalPorts }}
+        external_ports: {{ toYaml .externalPorts | nindent 8 }}
+        {{- end }}
+        management_interface: {{ .managementInterface }}
+        timeout: 60
+    {{- end }}
+    {{- end }}
+    {{- if .Values.exchange.enabled }}
+    {{- range .Values.exchange.hosts }}
+      - name: exchange-{{ .addr | replace "https://" "" | replace "http://" "" | replace "." "-" | replace ":" "-" }}
+        provider: exchange
+        addr: {{ .addr | quote }}
+        transport: {{ .transport | quote }}
+        username: {{ .username | quote }}
+        password_path: "/run/secrets/exchange_password"
+        verify: {{ .verify }}
+        remote_path: {{ .remotePath | quote }}
+        services: {{ .services | quote }}
+        timeout: 120
+    {{- end }}
     {{- end }}
 
     {{- if .Values.monitor.enabled }}

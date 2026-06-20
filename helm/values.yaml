@@ -34,7 +34,9 @@ repo:
 # ── SSH configuration (optional) ──────────────────────────────────
 # When `knownHosts` is set to the public key(s) of the Git server,
 # the deployment uses strict host key verification. Otherwise
-# StrictHostKeyChecking=no is used for backward compatibility.
+# StrictHostKeyChecking=accept-new is used (accepts the key on first
+# connection but verifies it on subsequent ones). For the strictest
+# security, always set knownHosts with the server's public key.
 #
 # Example:
 #   knownHosts: |
@@ -72,6 +74,29 @@ f5:
     - addr: "https://bigip.example.com"
       username: "admin"
       verify: true
+
+# ── Ivanti Connect Secure VPN (optional) ───────────────────────────
+
+ivanti:
+  enabled: false
+  hosts:
+    - addr: "https://vpn.example.com"
+      verify: true
+      internalPorts: []
+      externalPorts: []
+      managementInterface: false
+
+# ── Exchange SMTP / WinRM (optional) ──────────────────────────────
+
+exchange:
+  enabled: false
+  hosts:
+    - addr: "https://exchange.example.com:5986"
+      transport: ntlm
+      username: "DOMAIN\\user"
+      verify: true
+      remotePath: "C:\\certs"
+      services: "SMTP"
 
 # ── Certificate monitor & auto-renewal (optional) ──────────────────
 
@@ -129,6 +154,16 @@ persistence:
 service:
   port: 8000
   type: ClusterIP
+
+# ── Prometheus monitoring (optional) ──────────────────────────────
+
+monitoring:
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    additionalLabels: {}
+  prometheusRule:
+    enabled: false
 
 # ── Resources ──────────────────────────────────────────────────────
 
