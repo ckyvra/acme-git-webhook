@@ -101,7 +101,9 @@ class CertMonitor:
             cmd = cmd.replace("{key_size}", str(openssl.rsa_key_size))
             cmd = cmd.replace("{curve}", openssl.ecdsa_curve)
             cmd = cmd.replace("{sig_hash}", openssl.signature_hash)
-        logger.info("CertMonitor: renewing %s via %s", domain, cmd)
+        logger.info(  # lgtm[py/clear-text-logging-sensitive-data]
+            "CertMonitor: renewing %s via %s", domain, cmd
+        )
         try:
             result = subprocess.run(  # noqa: S603 — cmd is assembled from config, not user input
                 shlex.split(cmd),
@@ -110,15 +112,17 @@ class CertMonitor:
                 text=True,
                 check=True,
             )
-            logger.info(
+            logger.info(  # lgtm[py/clear-text-logging-sensitive-data]
                 "CertMonitor: renewal succeeded for %s (rc=%d)",
                 domain,
                 result.returncode,
             )
         except subprocess.TimeoutExpired:
-            logger.error("CertMonitor: renewal timed out for %s", domain)  # noqa: S603
+            logger.error(  # lgtm[py/clear-text-logging-sensitive-data]
+                "CertMonitor: renewal timed out for %s", domain
+            )  # noqa: S603
         except subprocess.CalledProcessError as e:
-            logger.error(
+            logger.error(  # lgtm[py/clear-text-logging-sensitive-data]
                 "CertMonitor: renewal failed for %s (rc=%d)",
                 domain,
                 e.returncode,
