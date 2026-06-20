@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -20,7 +21,7 @@ from app.dns_update import add_txt_record as nsupdate_add
 from app.dns_update import remove_txt_record as nsupdate_remove
 from app.git_handler import clone_or_pull, commit_and_push
 from app.metrics import create_metrics_app, webhook_requests_total
-from app.models import AcmeRequest, CertDeployRequest, DeployRequest, PropagationRequest, RenewRequest
+from app.models import AcmeRequest, CertDeployRequest, DeployRequest, PropagationRequest, RenewRequest, TargetPatchRequest
 from app.targets.manager import DeployManager
 from app.vault_handler import VaultHandler
 from app.zone_handler import add_txt_record as git_add
@@ -158,6 +159,15 @@ app.mount("/metrics", create_metrics_app())
 
 
 @app.middleware("http")
+async def _add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    return response
+
+
+@app.middleware("http")
 async def _count_requests(request: Request, call_next):
     response = await call_next(request)
     endpoint = request.url.path
@@ -270,6 +280,42 @@ def certs_status(
     return {"certs": monitor.get_status()}
 
 
+@app.patch("/certs/{domain}/targets")
+def patch_cert_targets(
+    domain: str,
+    req: TargetPatchRequest,
+    _token: str = Depends(_auth_dep),
+):
+    """Set per-domain target routing for certificate deployment.
+
+    Associates a list of target names with a domain in Vault metadata.
+    When ``POST /deploy/{domain}`` is called without explicit
+    ``target_names``, the deploy endpoint will read this list and
+    deploy only to the specified targets.
+
+    Stored in the ``targets`` field inside the Vault secret's
+    ``metadata`` JSON blob.
+    """
+    handler = vault_handler
+    if handler is None:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Vault handler not available",
+        )
+
+    mgr = deploy_manager
+    if mgr is not None:
+        for name in req.targets:
+            if name not in mgr.targets:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Unknown target: {name}",
+                )
+
+    handler.update_cert_targets(domain, req.targets)
+    return {"status": "ok", "domain": domain}
+
+
 @app.post("/acme/renew")
 def acme_renew(
     req: RenewRequest,
@@ -303,6 +349,38 @@ def health():
     process is alive and accepting requests.
     """
     return {"status": "ok"}
+
+
+@app.get("/readyz")
+def readyz():
+    """Readiness probe endpoint.
+
+    Returns 200 only when the application is fully initialized:
+    config loaded, repository directory exists, Vault connected
+    (if configured). Returns 503 if dependencies are not ready.
+    """
+    checks: dict[str, str] = {}
+    status_code = 200
+
+    cfg = config
+    if cfg is not None:
+        git_dir = Path(cfg.webhook.work_dir) / "zone-repo"
+        if not git_dir.exists():
+            checks["git"] = "not cloned"
+            status_code = 503
+        if cfg.vault and not cfg.vault.skip and vault_handler is not None:
+            try:
+                vault_handler._ensure_authenticated()
+            except Exception:
+                checks["vault"] = "not connected"
+                status_code = 503
+    else:
+        checks["config"] = "not loaded"
+        status_code = 503
+
+    if status_code == 200:
+        checks["status"] = "ok"
+    return JSONResponse(content=checks, status_code=status_code)
 
 
 @app.post("/acme/auth")
@@ -652,11 +730,28 @@ def deploy_cert_to_targets(
                 detail=f"Failed to read certificate from Vault: {e}",
             )
 
+    target_names = req.target_names
+    if target_names is None and vault_handler is not None:
+        try:
+            if vault_handler._client is not None:
+                secret = vault_handler._client.secrets.kv.v2.read_secret_version(
+                    mount_point=vault_handler.config.kv_mount,
+                    path=f"{vault_handler.config.certs_path}/{domain}",
+                )
+                data = secret.get("data", {}).get("data", {})
+                metadata_raw = data.get("metadata", "{}")
+                metadata = json.loads(metadata_raw) if isinstance(metadata_raw, str) else metadata_raw
+                stored_targets = metadata.get("targets")
+                if stored_targets is not None:
+                    target_names = stored_targets
+        except Exception:
+            logger.info("No per-domain targets found for %s, deploying to all targets", domain)
+
     results = mgr.deploy(
         domain=domain,
         fullchain_pem=fullchain_pem,
         privkey_pem=privkey_pem,
-        target_names=req.target_names,
+        target_names=target_names,
     )
 
     return {
