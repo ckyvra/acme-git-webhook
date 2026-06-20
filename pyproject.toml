@@ -51,6 +51,27 @@ strict = false
 ignore_missing_imports = true
 disallow_untyped_defs = false
 
+[tool.coverage.run]
+source = ["app"]
+omit = ["*/__init__.py"]
+relative_files = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if False:",
+    "if TYPE_CHECKING:",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

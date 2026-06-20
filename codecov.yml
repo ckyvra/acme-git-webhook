@@ -1,0 +1,42 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 85%
+        threshold: 2%
+        base: auto
+        if_ci_failed: error
+        only_pulls: false
+    patch:
+      default:
+        target: 75%
+        threshold: 5%
+        base: auto
+        if_ci_failed: error
+        only_pulls: false
+
+comment:
+  layout: "header, diff, flags, components"
+  behavior: default
+  require_changes: false
+
+flag_management:
+  individual_flags:
+    - name: unit
+      paths:
+        - app/
+      statuses:
+        - type: project
+          target: 85%
+        - type: patch
+          target: 75%
+
+component_management:
+  individual_components:
+    - component_id: app_core
+      name: Core application
+      paths:
+        - app/**
+      statuses:
+        - type: project
+          target: 85%
