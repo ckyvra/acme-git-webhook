@@ -1,11 +1,14 @@
 import json
 import logging
 import os
+import uuid
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fasteners import InterProcessLock
 from slowapi import Limiter
@@ -28,6 +31,22 @@ from app.zone_handler import add_txt_record as git_add
 from app.zone_handler import remove_txt_record as git_remove
 
 logger = logging.getLogger(__name__)
+_request_id: ContextVar[str] = ContextVar("request_id", default="")
+
+
+class JSONFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        return json.dumps(
+            {
+                "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
+                "level": record.levelname,
+                "logger": record.name,
+                "message": record.getMessage(),
+                "request_id": _request_id.get() or None,
+            },
+            default=str,
+        )
+
 
 # Module-level globals, populated once at startup via the lifespan hook.
 config: AppConfig | None = None
@@ -130,6 +149,11 @@ async def lifespan(app: FastAPI):
     relative to the working directory.
     """
     global config, vault_handler, deploy_manager, cert_monitor
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(JSONFormatter())
+    logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
+
     config_path = os.getenv("CONFIG_PATH", "config.yaml")
     config = load_config(config_path)
     env_key = os.environ.get("ACME_WEBHOOK_API_KEY")
@@ -157,6 +181,15 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 app.mount("/metrics", create_metrics_app())
+
+
+@app.middleware("http")
+async def _add_request_id(request: Request, call_next):
+    req_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    _request_id.set(req_id)
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = req_id
+    return response
 
 
 @app.middleware("http")
@@ -350,6 +383,22 @@ def health():
     process is alive and accepting requests.
     """
     return {"status": "ok"}
+
+
+_dashboard_html: str | None = None
+
+
+def _load_dashboard() -> str:
+    global _dashboard_html
+    if _dashboard_html is None:
+        path = Path(__file__).resolve().parent / "static" / "dashboard.html"
+        _dashboard_html = path.read_text()
+    return _dashboard_html
+
+
+@app.get("/", response_class=HTMLResponse)
+def dashboard(_token: str = Depends(_auth_dep)):
+    return _load_dashboard()
 
 
 @app.get("/readyz")
