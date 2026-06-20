@@ -44,9 +44,13 @@
    hadolint Dockerfile
    ```
 5. Verify all 260+ tests pass and there are no new warnings.
-6. Update documentation to reflect the changes:
+6. Verify French docs parity:
+   ```bash
+   diff <(ls docs/*.md) <(ls docs/fr/*.md)
+   ```
+7. Update documentation to reflect the changes:
    - **README.md** — update usage examples, config reference, API endpoints.
-   - **`docs/` (MkDocs)** — keep the English (`en/`) and French (`fr/`) documentation in sync with any new features, config fields, or behavioural changes.
+   - **`docs/` (MkDocs)** — keep the English (`en/`) and French (`fr/`) documentation in sync with any new features, config fields, or behavioural changes. Both locales must be updated together.
    - **Code comments and docstrings** — ensure public API docstrings are accurate, especially for new or modified endpoints.
 
 ## Code conventions

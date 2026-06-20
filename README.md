@@ -154,7 +154,7 @@ curl -X POST https://webhook:8000/deploy/example.com/f5-paris \
   -H "Authorization: Bearer $API_KEY"
 ```
 
-Deploy routing per domain is stored in Vault metadata. Set it via:
+Per-domain target routing is stored in Vault metadata and managed via the dedicated `PATCH /certs/{domain}/targets` endpoint. When ``POST /deploy/{domain}`` is called without explicit ``target_names``, the deploy endpoint reads this list and deploys only to the specified targets. If no per-domain targets are configured, it falls back to deploying to all targets.
 
 ```bash
 curl -X PATCH https://webhook:8000/certs/example.com/targets \

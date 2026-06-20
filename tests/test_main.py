@@ -38,8 +38,14 @@ def _setup_config(tmp_path: Path, bare_git_repo: Path):
     import app.main as m
 
     m.config = global_config
+    m.vault_handler = None
+    m.deploy_manager = None
+    m.cert_monitor = None
     yield
     m.config = None
+    m.vault_handler = None
+    m.deploy_manager = None
+    m.cert_monitor = None
 
 
 @pytest.fixture
@@ -1273,3 +1279,166 @@ class TestAcmeWebhookApiKey:
         with patch("app.main.load_config", return_value=test_config):
             with TestClient(app):
                 assert m.config.auth is None
+
+
+class TestPatchCertTargets:
+    """Tests for PATCH /certs/{domain}/targets."""
+
+    def test_patch_sets_targets(self, client: TestClient):
+        import app.main as m
+
+        m.vault_handler = MagicMock()
+
+        resp = client.patch(
+            "/certs/example.com/targets",
+            json={"targets": ["f5-paris", "ivanti-vpn"]},
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json() == {"status": "ok", "domain": "example.com"}
+
+        m.vault_handler.update_cert_targets.assert_called_once_with(
+            "example.com",
+            ["f5-paris", "ivanti-vpn"],
+        )
+
+    def test_patch_without_auth_returns_401(self, client: TestClient):
+        resp = client.patch(
+            "/certs/example.com/targets",
+            json={"targets": ["f5-paris"]},
+        )
+        assert resp.status_code == 401
+
+    def test_patch_with_invalid_key_returns_401(self, client: TestClient):
+        resp = client.patch(
+            "/certs/example.com/targets",
+            json={"targets": ["f5-paris"]},
+            headers={"Authorization": "Bearer wrong-key"},
+        )
+        assert resp.status_code == 401
+
+    def test_patch_unknown_target_returns_422(self, client: TestClient):
+        import app.main as m
+
+        m.vault_handler = MagicMock()
+        mgr = MagicMock()
+        mgr.targets = {"f5-paris": MagicMock()}
+        m.deploy_manager = mgr
+
+        resp = client.patch(
+            "/certs/example.com/targets",
+            json={"targets": ["unknown-target"]},
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 422
+
+    def test_patch_without_vault_handler_returns_502(self, client: TestClient):
+        import app.main as m
+
+        m.vault_handler = None
+
+        resp = client.patch(
+            "/certs/example.com/targets",
+            json={"targets": ["f5-paris"]},
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 502
+
+    def test_patch_with_empty_targets_list(self, client: TestClient):
+        import app.main as m
+
+        m.vault_handler = MagicMock()
+
+        resp = client.patch(
+            "/certs/example.com/targets",
+            json={"targets": []},
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 200
+        m.vault_handler.update_cert_targets.assert_called_once_with(
+            "example.com",
+            [],
+        )
+
+
+class TestDeployWithPerDomainTargets:
+    """Tests for per-domain target routing in the deploy endpoint."""
+
+    def test_deploy_uses_per_domain_targets(self, client: TestClient):
+        import app.main as m
+
+        handler = MagicMock()
+        handler._client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {
+                "data": {
+                    "metadata": '{"targets": ["f5-paris"]}',
+                    "fullchain.pem": "fullchain",
+                    "privkey.pem": "key",
+                },
+            },
+        }
+        m.vault_handler = handler
+
+        mgr = MagicMock()
+        mgr.deploy.return_value = [
+            MagicMock(target="f5-paris", status="success", detail="ok"),
+        ]
+        m.deploy_manager = mgr
+
+        resp = client.post(
+            "/deploy/example.com",
+            json={},
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 200
+
+        _, kwargs = mgr.deploy.call_args
+        assert kwargs["target_names"] == ["f5-paris"]
+
+    def test_deploy_falls_back_to_all_when_no_per_domain_targets(self, client: TestClient):
+        import app.main as m
+
+        handler = MagicMock()
+        handler._client.secrets.kv.v2.read_secret_version.return_value = {
+            "data": {
+                "data": {
+                    "metadata": '{"domain": "example.com"}',
+                    "fullchain.pem": "fullchain",
+                    "privkey.pem": "key",
+                },
+            },
+        }
+        m.vault_handler = handler
+
+        mgr = MagicMock()
+        mgr.deploy.return_value = []
+        m.deploy_manager = mgr
+
+        resp = client.post(
+            "/deploy/example.com",
+            json={},
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 200
+
+        _, kwargs = mgr.deploy.call_args
+        assert kwargs["target_names"] is None
+
+    def test_deploy_explicit_target_names_ignores_per_domain(self, client: TestClient):
+        import app.main as m
+
+        m.vault_handler = MagicMock()
+
+        mgr = MagicMock()
+        mgr.deploy.return_value = []
+        m.deploy_manager = mgr
+
+        resp = client.post(
+            "/deploy/example.com",
+            json={"target_names": ["explicit-target"]},
+            headers={"Authorization": "Bearer test-key"},
+        )
+        assert resp.status_code == 200
+
+        _, kwargs = mgr.deploy.call_args
+        assert kwargs["target_names"] == ["explicit-target"]

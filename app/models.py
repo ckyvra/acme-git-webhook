@@ -134,3 +134,14 @@ class CertDeployRequest(BaseModel):
         if "exclude" not in kwargs:
             kwargs["exclude"] = {"privkey_pem"}
         return super().model_dump(*args, **kwargs)
+
+
+class TargetPatchRequest(BaseModel):
+    """Request payload for PATCH /certs/{domain}/targets.
+
+    Sets the list of target names that a certificate should be deployed
+    to when ``target_names`` is not explicitly provided to the deploy
+    endpoint.
+    """
+
+    targets: list[str]
