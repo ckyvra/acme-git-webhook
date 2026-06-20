@@ -1,0 +1,21 @@
+name: digestabot
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  digestabot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: chainguard-dev/digestabot@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          signoff: true
+          labels-for-pr: dependencies
