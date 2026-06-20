@@ -127,7 +127,7 @@ class CertMonitor:
                 )
                 return
 
-        cmd = self.config.renew_command.replace("{domain}", domain)
+        cmd = self.config.renew_command.replace("{domain}", shlex.quote(domain))
         openssl = self._openssl
         if openssl:
             cmd = cmd.replace("{key_type}", openssl.key_algorithm)
@@ -137,7 +137,7 @@ class CertMonitor:
         now_ts = datetime.now(UTC).timestamp()
         logger.info("CertMonitor: renewing %s via %s", domain, cmd)
         try:
-            result = subprocess.run(  # noqa: S603 — cmd is assembled from config, not user input
+            result = subprocess.run(
                 shlex.split(cmd),
                 timeout=self.config.renew_timeout,
                 capture_output=True,
