@@ -90,3 +90,28 @@ vault:
 #   renew_timeout: 300                # Max seconds for renewal command
 #   renew_threshold: 14               # Days before expiry to auto-renew
 #   renew_percentage: 15              # Alternative: renew when <=15% of cert lifetime remains
+#
+#   # Optional: restrict renewal and deployment to business hours.
+#   # When outside this window, operations are deferred to the next opening.
+#   deploy_window:
+#     start: "08:00"
+#     end: "18:00"
+#     days: [1, 2, 3, 4, 5]      # Monday to Friday
+#     timezone: "Europe/Paris"
+#
+# ── DNS update via nsupdate (RFC 2136) ───────────────────────────────────
+# Alternative to the Git-based zone file management. When enabled, ACME
+# challenge TXT records are added/removed directly via nsupdate instead of
+# cloning, modifying and pushing a Git repo.
+#
+# dns:
+#   method: nsupdate                  # "git" (default) or "nsupdate"
+#   update:                           # Only used when method is "nsupdate"
+#     server: "127.0.0.1"             # Target DNS server
+#     port: 53                        # DNS server port
+#     key_name: "acme-key."           # TSIG key name (FQDN)
+#     key_secret: "base64-secret=="   # TSIG shared secret (mutually exclusive with key_file)
+#     key_file: "/run/secrets/tsig"   # TSIG secret from file (mutually exclusive with key_secret)
+#     key_algorithm: "hmac-sha256"    # TSIG algorithm
+#     zone: null                      # Optional explicit zone (e.g. "example.com.")
+#     ttl: 60                         # TXT record TTL in seconds

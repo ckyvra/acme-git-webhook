@@ -50,6 +50,24 @@ spec:
                 path: f5_password
                 mode: 0400
         {{- end }}
+        {{- if .Values.ivanti.enabled }}
+        - name: ivanti-api-key
+          secret:
+            secretName: {{ include "webhook.fullname" . }}
+            items:
+              - key: ivanti_api_key
+                path: ivanti_api_key
+                mode: 0400
+        {{- end }}
+        {{- if .Values.exchange.enabled }}
+        - name: exchange-password
+          secret:
+            secretName: {{ include "webhook.fullname" . }}
+            items:
+              - key: exchange_password
+                path: exchange_password
+                mode: 0400
+        {{- end }}
 
       containers:
         - name: webhook
@@ -74,7 +92,7 @@ spec:
 {{- if .Values.ssh.knownHosts }}
               value: "ssh -i /run/secrets/deploy_key -o UserKnownHostsFile=/run/secrets/known_hosts -o StrictHostKeyChecking=yes"
 {{- else }}
-              value: "ssh -i /run/secrets/deploy_key -o StrictHostKeyChecking=no"
+              value: "ssh -i /run/secrets/deploy_key -o StrictHostKeyChecking=accept-new"
 {{- end }}
 
           volumeMounts:
@@ -101,6 +119,16 @@ spec:
               mountPath: /run/secrets/f5_password
               subPath: f5_password
             {{- end }}
+            {{- if .Values.ivanti.enabled }}
+            - name: ivanti-api-key
+              mountPath: /run/secrets/ivanti_api_key
+              subPath: ivanti_api_key
+            {{- end }}
+            {{- if .Values.exchange.enabled }}
+            - name: exchange-password
+              mountPath: /run/secrets/exchange_password
+              subPath: exchange_password
+            {{- end }}
 
           livenessProbe:
             httpGet:
@@ -111,7 +139,7 @@ spec:
 
           readinessProbe:
             httpGet:
-              path: /health
+              path: /readyz
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10

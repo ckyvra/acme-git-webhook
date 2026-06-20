@@ -16,10 +16,12 @@ logger = logging.getLogger(__name__)
 def _read_api_key(path: str) -> str:
     p = Path(path)
     if not p.exists():
-        raise RuntimeError(f"Ivanti API key file not found: {path}")
+        logger.error("Ivanti API key file not found: %s", path)
+        raise RuntimeError("Ivanti API key file not found")
     key = p.read_text().strip()
     if not key:
-        raise RuntimeError(f"Ivanti API key file is empty: {path}")
+        logger.error("Ivanti API key file is empty: %s", path)
+        raise RuntimeError("Ivanti API key file is empty")
     return key
 
 

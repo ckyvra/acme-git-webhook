@@ -2,6 +2,7 @@
 
 [![ci](https://github.com/ckyvra/acme-git-webhook/actions/workflows/ci.yml/badge.svg)](https://github.com/ckyvra/acme-git-webhook/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/ckyvra/acme-git-webhook/branch/main/graph/badge.svg)](https://codecov.io/gh/ckyvra/acme-git-webhook)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ckyvra/acme-git-webhook/badge)](https://scorecard.dev/viewer/?uri=github.com/ckyvra/acme-git-webhook)
 [![version](https://img.shields.io/github/v/tag/ckyvra/acme-git-webhook?label=version)](https://github.com/ckyvra/acme-git-webhook/tags)
 [![ghcr](https://img.shields.io/badge/GHCR-latest-blue?logo=docker)](https://github.com/ckyvra/acme-git-webhook/pkgs/container/acme-git-webhook)
 
@@ -154,7 +155,7 @@ curl -X POST https://webhook:8000/deploy/example.com/f5-paris \
   -H "Authorization: Bearer $API_KEY"
 ```
 
-Deploy routing per domain is stored in Vault metadata. Set it via:
+Per-domain target routing is stored in Vault metadata and managed via the dedicated `PATCH /certs/{domain}/targets` endpoint. When ``POST /deploy/{domain}`` is called without explicit ``target_names``, the deploy endpoint reads this list and deploys only to the specified targets. If no per-domain targets are configured, it falls back to deploying to all targets.
 
 ```bash
 curl -X PATCH https://webhook:8000/certs/example.com/targets \
