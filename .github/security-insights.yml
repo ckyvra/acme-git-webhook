@@ -1,0 +1,33 @@
+header:
+  schema-version: 2.0.0
+  last-updated: "2026-06-20"
+  last-reviewed: "2026-06-20"
+  commit-history: https://github.com/ckyvra/acme-git-webhook/commits/main
+  changelog: https://github.com/ckyvra/acme-git-webhook/releases
+
+project:
+  name: acme-git-webhook
+  description: ACME DNS-challenge webhook with multi-target deployment
+  repository: https://github.com/ckyvra/acme-git-webhook
+  license: https://github.com/ckyvra/acme-git-webhook/blob/main/LICENSE
+  documentation: https://ckyvra.github.io/acme-git-webhook
+
+security:
+  security-advisory:
+    private: true
+    severity: high
+    url: https://github.com/ckyvra/acme-git-webhook/security/advisories
+  vulnerability-reporting:
+    url: https://github.com/ckyvra/acme-git-webhook/security/advisories/new
+    acknowledgment: 48h
+    methods:
+      - GitHub Security Advisory
+
+authentication:
+  github-users:
+    - ckyvra
+
+publish:
+  docker:
+    registry: ghcr.io
+    url: https://github.com/ckyvra/acme-git-webhook/pkgs/container/acme-git-webhook
