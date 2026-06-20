@@ -16,6 +16,7 @@ All authenticated endpoints expect an `Authorization: Bearer <token>` header. To
 | `POST` | `/deploy/{domain}` | Bearer | `{ "target_names"?, "fullchain_pem"?, "privkey_pem"? }` | Deploy cert to all (or selected) targets |
 | `POST` | `/deploy/{domain}/{target}` | Bearer | — | Deploy cert to a specific target |
 | `GET` | `/certs/status` | Bearer | — | List certificates and days left |
+| `PATCH` | `/certs/{domain}/targets` | Bearer | `{ "targets": ["name1", "name2"] }` | Set per-domain target routing in Vault metadata |
 
 ---
 
@@ -158,13 +159,22 @@ Response:
 
 ### Configure deploy routing per domain
 
-Per-domain target routing is stored in Vault metadata via `PATCH`. This is not a dedicated endpoint but is managed through Vault directly or external automation.
+Per-domain target routing is stored in Vault metadata and managed via the dedicated `PATCH` endpoint. When ``POST /deploy/{domain}`` is called without explicit ``target_names``, the deploy endpoint will read this list and deploy only to the specified targets.
 
 ```bash
 curl -X PATCH http://localhost:8000/certs/example.com/targets \
   -H "Authorization: Bearer sk-XXXXXXXXXXXX" \
   -H "Content-Type: application/json" \
   -d '{"targets": ["f5-paris", "ivanti-vpn"]}'
+```
+
+Response:
+
+```json
+{
+  "status": "ok",
+  "domain": "example.com"
+}
 ```
 
 ## Rate limiting

@@ -16,6 +16,20 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
+from app.auth import verify_api_key
+from app.cert_monitor import CertMonitor
+from app.config import AppConfig, load_config
+from app.dns_probe import check_propagation, validate_nameserver
+from app.dns_update import add_txt_record as nsupdate_add
+from app.dns_update import remove_txt_record as nsupdate_remove
+from app.git_handler import clone_or_pull, commit_and_push
+from app.metrics import create_metrics_app, webhook_requests_total
+from app.models import AcmeRequest, CertDeployRequest, DeployRequest, PropagationRequest, RenewRequest, TargetPatchRequest
+from app.targets.manager import DeployManager
+from app.vault_handler import VaultHandler
+from app.zone_handler import add_txt_record as git_add
+from app.zone_handler import remove_txt_record as git_remove
+
 logger = logging.getLogger(__name__)
 _request_id: ContextVar[str] = ContextVar("request_id", default="")
 
@@ -33,22 +47,79 @@ class JSONFormatter(logging.Formatter):
             default=str,
         )
 
-from app.auth import verify_api_key
-from app.cert_monitor import CertMonitor
-from app.config import AppConfig, load_config
-from app.dns_probe import check_propagation, validate_nameserver
-from app.git_handler import clone_or_pull, commit_and_push
-from app.metrics import create_metrics_app, webhook_requests_total
-from app.models import AcmeRequest, CertDeployRequest, DeployRequest, PropagationRequest, RenewRequest
-from app.targets.manager import DeployManager
-from app.vault_handler import VaultHandler
-from app.zone_handler import add_txt_record, remove_txt_record
 
 # Module-level globals, populated once at startup via the lifespan hook.
 config: AppConfig | None = None
 vault_handler: VaultHandler | None = None
 deploy_manager: DeployManager | None = None
 cert_monitor: CertMonitor | None = None
+
+
+def _nsupdate_cfg():
+    cfg = _get_config()
+    dns = cfg.dns
+    if dns and dns.update:
+        return dns.update
+    return None
+
+
+def _use_nsupdate() -> bool:
+    return _nsupdate_cfg() is not None
+
+
+def _add_txt_record_wrapper(domain: str, validation: str) -> None:
+    cfg = _get_config()
+    if _use_nsupdate():
+        nsup = _nsupdate_cfg()
+        nsupdate_add(
+            domain,
+            validation,
+            server=nsup.server,
+            port=nsup.port,
+            key_name=nsup.key_name,
+            key_secret=nsup.key_secret,
+            key_file=nsup.key_file,
+            key_algorithm=nsup.key_algorithm,
+            zone=nsup.zone,
+            ttl=nsup.ttl,
+        )
+    else:
+        work_dir = _repo_dir()
+        repo_root = work_dir / "zone-repo"
+        git_add(
+            repo_root,
+            domain,
+            validation,
+            cfg.repo.zone_path,
+            cfg.repo.zone_file_suffix,
+        )
+
+
+def _remove_txt_record_wrapper(domain: str) -> str | None:
+    cfg = _get_config()
+    if _use_nsupdate():
+        nsup = _nsupdate_cfg()
+        success = nsupdate_remove(
+            domain,
+            server=nsup.server,
+            port=nsup.port,
+            key_name=nsup.key_name,
+            key_secret=nsup.key_secret,
+            key_file=nsup.key_file,
+            key_algorithm=nsup.key_algorithm,
+            zone=nsup.zone,
+        )
+        return "nsupdate" if success else None
+    else:
+        work_dir = _repo_dir()
+        repo_root = work_dir / "zone-repo"
+        return git_remove(
+            repo_root,
+            domain,
+            cfg.repo.zone_path,
+            cfg.repo.zone_file_suffix,
+        )
+
 
 # Reusable FastAPI security scheme that extracts the Bearer token from
 # the Authorization header. It is shared by all protected endpoints.
@@ -92,7 +163,8 @@ async def lifespan(app: FastAPI):
         vault_handler = VaultHandler(config.vault)
 
     if config.targets:
-        deploy_manager = DeployManager(config.targets)
+        default_window = config.monitor.deploy_window if config.monitor else None
+        deploy_manager = DeployManager(config.targets, default_window=default_window)
 
     if config.monitor:
         cert_monitor = CertMonitor(config.monitor, vault_handler, openssl=config.openssl)
@@ -117,6 +189,15 @@ async def _add_request_id(request: Request, call_next):
     _request_id.set(req_id)
     response = await call_next(request)
     response.headers["X-Request-ID"] = req_id
+    return response
+
+
+@app.middleware("http")
+async def _add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
     return response
 
 
@@ -233,6 +314,42 @@ def certs_status(
     return {"certs": monitor.get_status()}
 
 
+@app.patch("/certs/{domain}/targets")
+def patch_cert_targets(
+    domain: str,
+    req: TargetPatchRequest,
+    _token: str = Depends(_auth_dep),
+):
+    """Set per-domain target routing for certificate deployment.
+
+    Associates a list of target names with a domain in Vault metadata.
+    When ``POST /deploy/{domain}`` is called without explicit
+    ``target_names``, the deploy endpoint will read this list and
+    deploy only to the specified targets.
+
+    Stored in the ``targets`` field inside the Vault secret's
+    ``metadata`` JSON blob.
+    """
+    handler = vault_handler
+    if handler is None:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Vault handler not available",
+        )
+
+    mgr = deploy_manager
+    if mgr is not None:
+        for name in req.targets:
+            if name not in mgr.targets:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Unknown target: {name}",
+                )
+
+    handler.update_cert_targets(domain, req.targets)
+    return {"status": "ok", "domain": domain}
+
+
 @app.post("/acme/renew")
 def acme_renew(
     req: RenewRequest,
@@ -268,6 +385,38 @@ def health():
     return {"status": "ok"}
 
 
+@app.get("/readyz")
+def readyz():
+    """Readiness probe endpoint.
+
+    Returns 200 only when the application is fully initialized:
+    config loaded, repository directory exists, Vault connected
+    (if configured). Returns 503 if dependencies are not ready.
+    """
+    checks: dict[str, str] = {}
+    status_code = 200
+
+    cfg = config
+    if cfg is not None:
+        git_dir = Path(cfg.webhook.work_dir) / "zone-repo"
+        if not git_dir.exists():
+            checks["git"] = "not cloned"
+            status_code = 503
+        if cfg.vault and not cfg.vault.skip and vault_handler is not None:
+            try:
+                vault_handler._ensure_authenticated()
+            except Exception:
+                checks["vault"] = "not connected"
+                status_code = 503
+    else:
+        checks["config"] = "not loaded"
+        status_code = 503
+
+    if status_code == 200:
+        checks["status"] = "ok"
+    return JSONResponse(content=checks, status_code=status_code)
+
+
 @app.post("/acme/auth")
 def acme_auth(
     req: AcmeRequest,
@@ -300,7 +449,6 @@ def acme_auth(
     """
     cfg = _get_config()
     work_dir = _repo_dir()
-    repo_root = work_dir / "zone-repo"
     lock_path = _lock_path()
 
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -318,22 +466,16 @@ def acme_auth(
             detail="Another operation is in progress, try again",
         )
     try:
-        # Step 1: ensure the local clone is up to date.
-        clone_or_pull(work_dir, cfg.repo.url, cfg.repo.branch)
+        # Step 1: ensure the local clone is up to date (git backend only).
+        if not _use_nsupdate():
+            clone_or_pull(work_dir, cfg.repo.url, cfg.repo.branch)
 
-        # Step 2: inject the ACME challenge TXT record into the zone.
-        add_txt_record(
-            repo_root,
-            req.domain,
-            req.validation or "",
-            cfg.repo.zone_path,
-            cfg.repo.zone_file_suffix,
-        )
+        # Step 2: inject the ACME challenge TXT record.
+        _add_txt_record_wrapper(req.domain, req.validation or "")
 
-        # Step 3: commit and push to the remote repository.
-        # The CI/CD pipeline will detect the push and deploy the
-        # updated zone to the authoritative DNS servers.
-        commit_and_push(work_dir, f"ACME: add challenge for {req.domain}")
+        # Step 3: commit and push (git backend only).
+        if not _use_nsupdate():
+            commit_and_push(work_dir, f"ACME: add challenge for {req.domain}")
     finally:
         # Ensure the lock is always released, even if one of the
         # operations above raised an exception. This prevents the
@@ -391,7 +533,6 @@ def acme_cleanup(
     """
     cfg = _get_config()
     work_dir = _repo_dir()
-    repo_root = work_dir / "zone-repo"
     lock_path = _lock_path()
 
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -405,25 +546,19 @@ def acme_cleanup(
             detail="Another operation is in progress, try again",
         )
     try:
-        clone_or_pull(work_dir, cfg.repo.url, cfg.repo.branch)
-        removed = remove_txt_record(
-            repo_root,
-            req.domain,
-            cfg.repo.zone_path,
-            cfg.repo.zone_file_suffix,
-        )
+        if not _use_nsupdate():
+            clone_or_pull(work_dir, cfg.repo.url, cfg.repo.branch)
+        removed = _remove_txt_record_wrapper(req.domain)
         if removed:
-            # Only commit and push if a record was actually deleted.
-            # This avoids pushing an empty commit when cleanup is
-            # called for a domain that had no challenge record.
-            commit_and_push(work_dir, f"ACME: remove challenge for {req.domain}")
+            if not _use_nsupdate():
+                commit_and_push(work_dir, f"ACME: remove challenge for {req.domain}")
+            zone_file = Path(removed).name
             return {
                 "status": "ok",
                 "domain": req.domain,
-                "zone_file": Path(removed).name,
+                "zone_file": zone_file,
             }
         else:
-            # No zone file or no TXT record — nothing to clean up.
             return {
                 "status": "skipped",
                 "domain": req.domain,
@@ -629,11 +764,28 @@ def deploy_cert_to_targets(
                 detail=f"Failed to read certificate from Vault: {e}",
             )
 
+    target_names = req.target_names
+    if target_names is None and vault_handler is not None:
+        try:
+            if vault_handler._client is not None:
+                secret = vault_handler._client.secrets.kv.v2.read_secret_version(
+                    mount_point=vault_handler.config.kv_mount,
+                    path=f"{vault_handler.config.certs_path}/{domain}",
+                )
+                data = secret.get("data", {}).get("data", {})
+                metadata_raw = data.get("metadata", "{}")
+                metadata = json.loads(metadata_raw) if isinstance(metadata_raw, str) else metadata_raw
+                stored_targets = metadata.get("targets")
+                if stored_targets is not None:
+                    target_names = stored_targets
+        except Exception:
+            logger.info("No per-domain targets found for %s, deploying to all targets", domain)
+
     results = mgr.deploy(
         domain=domain,
         fullchain_pem=fullchain_pem,
         privkey_pem=privkey_pem,
-        target_names=req.target_names,
+        target_names=target_names,
     )
 
     return {
