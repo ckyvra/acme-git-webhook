@@ -100,9 +100,31 @@ class CertMonitor:
         except Exception:
             logger.warning("CertMonitor: failed to send webhook alert for %s", domain, exc_info=True)
 
+    def _sanitize_cmd(self, cmd: str) -> str:
+        for flag in ("--eab-kid", "--eab-hmac-key", "--email"):
+            marker = f"{flag} "
+            if marker in cmd:
+                idx = cmd.index(marker) + len(marker)
+                end = cmd.find(" ", idx)
+                if end == -1:
+                    end = len(cmd)
+                cmd = cmd[:idx] + "***" + cmd[end:]
+        return cmd
+
+    def _redact_domain(self, domain: str) -> str:
+        if not domain:
+            return "***"
+        labels = domain.split(".")
+        if len(labels) >= 2:
+            first = labels[0]
+            suffix = labels[-1]
+            first_redacted = (first[:1] + "***") if first else "***"
+            return f"{first_redacted}.{suffix}"
+        return domain[:1] + "***"
+
     def _run_renew(self, domain: str) -> None:
         if self.config is None or not self.config.renew_command:
-            return  # lgtm[py/clear-text-logging-sensitive-data]
+            return
 
         window = self.config.deploy_window
         if window and self._scheduler is not None:
@@ -135,8 +157,8 @@ class CertMonitor:
             cmd = cmd.replace("{curve}", openssl.ecdsa_curve)
             cmd = cmd.replace("{sig_hash}", openssl.signature_hash)
         now_ts = datetime.now(UTC).timestamp()
-        logger.info(  # lgtm[py/clear-text-logging-sensitive-data]
-            "CertMonitor: renewing %s via %s", domain, cmd
+        logger.info(
+            "CertMonitor: renewing %s via %s", self._redact_domain(domain), self._sanitize_cmd(cmd)
         )
         try:
             result = subprocess.run(
@@ -148,19 +170,19 @@ class CertMonitor:
             )
             cert_last_renewal_timestamp.labels(domain=domain, status="success").set(now_ts)
             cert_renewal_count.labels(domain=domain).inc()
-            logger.info(  # lgtm[py/clear-text-logging-sensitive-data]
+            logger.info(
                 "CertMonitor: renewal succeeded for %s (rc=%d)",
                 domain,
                 result.returncode,
             )
         except subprocess.TimeoutExpired:
             cert_last_renewal_timestamp.labels(domain=domain, status="failure").set(now_ts)
-            logger.error(  # lgtm[py/clear-text-logging-sensitive-data]
+            logger.error(
                 "CertMonitor: renewal timed out for %s", domain
             )
         except subprocess.CalledProcessError as e:
             cert_last_renewal_timestamp.labels(domain=domain, status="failure").set(now_ts)
-            logger.error(  # lgtm[py/clear-text-logging-sensitive-data]
+            logger.error(
                 "CertMonitor: renewal failed for %s (rc=%d)",
                 domain,
                 e.returncode,
@@ -191,8 +213,8 @@ class CertMonitor:
             if days_left <= threshold:
                 sent = self._sent_warnings.setdefault(domain, set())
                 if threshold not in sent:
-                    logger.warning(  # lgtm[py/clear-text-logging-sensitive-data] — operational, not secret
-                        "CertMonitor: %s expires in %d days (threshold: %d)",
+                logger.warning(
+                    "CertMonitor: %s expires in %d days (threshold: %d)",
                         domain,
                         days_left,
                         threshold,
