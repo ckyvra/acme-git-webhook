@@ -14,30 +14,22 @@ l'expiration.
 
 ## Fonctionnement
 
-```
-Client ACME (certbot/acme.sh)
-        │
-        │  POST /acme/auth { domain, validation }
-        │  POST /acme/cleanup { domain }
-        │  POST /acme/deploy { domain, cert_pem, ... }
-        ▼
-cert-renew
-        │
-        │  1. git pull
-        │  2. dnspython: mise à jour du fichier de zone
-        │  3. git commit + push
-        │  4. Vérification propagation DNS (optionnelle, automatique)
-        │  5. Vault : stockage du certificat
-        │  6. Cibles de déploiement : F5, Ivanti, Exchange… (optionnel)
-        │  7. Surveillance : vérification expiration + renouvellement auto (optionnel)
-        ├──────────────────────┬───────────────────────┬──────────────────────┐
-        ▼                      ▼                       ▼                      ▼
-Dépôt GitHub           HashiCorp Vault          Cibles (F5 / Ivanti /    Logs / Webhook
-(zones Bind)           (KV store)               Exchange / personnalisée) (alerte expiration)
-        │                      │                       │
-        │  CI/CD               │  Récupération par     │  Profil SSL mis à jour
-        ▼                      ▼                       ▼
-DNS faisant autorité    secret/certs/          /Common/example.com
+```mermaid
+flowchart LR
+    ACME["Client ACME<br/>(certbot / acme.sh)"] -->|POST /acme/auth| WH["cert-renew"]
+    ACME -->|POST /acme/cleanup| WH
+    ACME -->|POST /acme/deploy| WH
+
+    WH -->|git push| GIT["Dépôt GitHub<br/>(zones Bind)"]
+    WH -->|store cert| VAULT["HashiCorp Vault<br/>secret/certs/{domain}/"]
+
+    VAULT -->|déploiement| F5["F5 Big-IP<br/>iControl REST"]
+    VAULT -->|déploiement| IV["Ivanti VPN<br/>REST API"]
+    VAULT -->|déploiement| EX["Exchange SMTP<br/>WinRM / PowerShell"]
+    VAULT -->|surveillance| MON["CertMonitor<br/>APScheduler"]
+
+    MON -->|alerte| ALERT["Webhook<br/>(Slack, etc.)"]
+    MON -->|renouvellement auto| ACME
 ```
 
 ## Fonctionnalités clés
