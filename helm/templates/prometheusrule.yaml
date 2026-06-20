@@ -1,0 +1,26 @@
+{{- if .Values.monitoring.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "webhook.fullname" . }}
+  labels: {{ include "webhook.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: acme-git-webhook
+      rules:
+        - alert: CertificateExpiringSoon
+          expr: acme_cert_expiry_days_left < 14
+          for: 1h
+          annotations:
+            summary: "Certificate {{ $labels.domain }} expires in {{ $value }} days"
+        - alert: CertificateExpired
+          expr: acme_cert_expiry_days_left <= 0
+          for: 0m
+          annotations:
+            summary: "Certificate {{ $labels.domain }} has expired"
+        - alert: HighErrorRate
+          expr: rate(acme_webhook_requests_total{status=~"4..|5.."}[5m]) > 0.1
+          for: 5m
+          annotations:
+            summary: "High error rate on webhook endpoints"
+{{- end }}
