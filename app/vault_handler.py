@@ -232,6 +232,49 @@ class VaultHandler:
         logger.info("Certificate for %s stored in Vault at %s", domain, base_path)
         return base_path
 
+    def update_cert_targets(self, domain: str, targets: list[str]) -> None:
+        """Set the list of target names for per-domain deploy routing.
+
+        Reads the existing secret at ``<kv_mount>/<certs_path>/<domain>``,
+        updates the ``targets`` field inside the JSON ``metadata`` key, and
+        writes it back so that the deploy endpoint can pick up per-domain
+        routing.
+
+        If no secret exists yet a minimal metadata block is created so that
+        the targets field can be set in advance of the first deploy.
+        """
+        self._ensure_authenticated()
+        if self._client is None:
+            raise RuntimeError("Vault client not initialized after authentication")
+
+        path = f"{self.config.certs_path}/{domain}"
+        mount = self.config.kv_mount
+
+        try:
+            secret = self._client.secrets.kv.v2.read_secret_version(
+                mount_point=mount,
+                path=path,
+            )
+            data = secret.get("data", {}).get("data", {})
+            metadata_raw = data.get("metadata", "{}")
+            metadata = json.loads(metadata_raw) if isinstance(metadata_raw, str) else metadata_raw
+        except Exception:
+            metadata = {
+                "domain": domain,
+                "stored_at": datetime.now(UTC).isoformat(),
+            }
+
+        metadata["targets"] = targets
+
+        self._client.secrets.kv.v2.create_or_update_secret(
+            mount_point=mount,
+            path=path,
+            secret={
+                "metadata": json.dumps(metadata, indent=2),
+            },
+        )
+        logger.info("Targets for %s updated to %s", domain, targets)
+
     def delete_cert(self, domain: str) -> bool:
         """Delete a certificate entry from Vault.
 
