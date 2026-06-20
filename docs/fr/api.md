@@ -17,6 +17,7 @@ par token Bearer. Incluez l'en-tête `Authorization: Bearer <api_key>`.
 | `/deploy/{domain}` | `POST` | Bearer | — | Déploie le certificat vers toutes les cibles |
 | `/deploy/{domain}/{target}` | `POST` | Bearer | — | Déploie le certificat vers une cible spécifique |
 | `/certs/status` | `GET` | Bearer | — | Liste les certificats avec jours restants |
+| `/certs/{domain}/targets` | `PATCH` | Bearer | `{ "targets": ["nom1", "nom2"] }` | Définit le routage par domaine dans les métadonnées Vault |
 
 ---
 
@@ -182,13 +183,22 @@ curl -s -X POST http://localhost:8000/deploy/example.com \
 }
 ```
 
-Le routage peut être limité à certaines cibles via l'API :
+Le routage par domaine est stocké dans les métadonnées Vault via l'endpoint `PATCH`. Quand ``POST /deploy/{domain}`` est appelé sans ``target_names`` explicite, l'endpoint de déploiement lit cette liste et ne déploie que vers les cibles spécifiées.
 
 ```bash
 curl -s -X PATCH http://localhost:8000/certs/example.com/targets \
   -H "Authorization: Bearer sk-XXXXXXXXXXXX" \
   -H "Content-Type: application/json" \
   -d '{"targets": ["f5-paris", "ivanti-vpn"]}'
+```
+
+Réponse :
+
+```json
+{
+  "status": "ok",
+  "domain": "example.com"
+}
 ```
 
 ### `POST /deploy/{domain}/{target}`

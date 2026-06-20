@@ -1,8 +1,9 @@
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.config import ExchangeTargetConfig, F5TargetConfig, IvantiTargetConfig
+from app.config import DeployWindow, ExchangeTargetConfig, F5TargetConfig, IvantiTargetConfig
 from app.targets.base import DeployResult
 
 
@@ -161,3 +162,93 @@ class TestDeployManager:
         with patch("app.targets.manager.logger") as mock_logger:
             manager.close()
         mock_logger.exception.assert_called_once()
+
+
+class TestDeployManagerWindow:
+    @pytest.fixture
+    def configs(self):
+        return [
+            F5TargetConfig(
+                name="f5-paris",
+                addr="https://bigip1.example.com",
+                username="admin",
+                password_path="/fake/pw",
+                verify=False,
+                deploy_window=DeployWindow(
+                    start="08:00",
+                    end="18:00",
+                    days=[1, 2, 3, 4, 5],
+                ),
+            ),
+            F5TargetConfig(
+                name="f5-london",
+                addr="https://bigip2.example.com",
+                username="admin",
+                password_path="/fake/pw",
+                verify=False,
+            ),
+        ]
+
+    @pytest.fixture
+    def manager(self, configs):
+        with patch("app.targets.manager._build_target", _build_mock_target):
+            from app.targets.manager import DeployManager as DM
+
+            yield DM(configs)
+
+    def test_deferred_outside_window(self, manager):
+        """Target with window outside hours returns deferred."""
+        with patch("app.targets.manager.is_within_window", return_value=False), patch("app.targets.manager.next_window_start") as mock_next:
+            mock_next.return_value = datetime(2026, 6, 22, 8, 0, tzinfo=UTC)
+            results = manager.deploy("example.com", "fullchain", "key")
+            assert results[0].status == "deferred"
+            assert results[0].details["next_window"] == "2026-06-22T08:00:00+00:00"
+
+    def test_immediate_within_window(self, manager):
+        """Target with window within hours deploys immediately."""
+        with patch("app.targets.manager.is_within_window", return_value=True):
+            results = manager.deploy("example.com", "fullchain", "key")
+            assert results[0].status == "ok"
+
+    def test_without_window_deploys_immediately(self, manager):
+        """Target without deploy_window always deploys."""
+        assert manager._windows["f5-london"] is None
+        results = manager.deploy("example.com", "fullchain", "key", target_names=["f5-london"])
+        assert results[0].status == "ok"
+
+    def test_default_window_from_global(self):
+        """Target without own window inherits global default."""
+        cfg = F5TargetConfig(
+            name="f5-paris",
+            addr="https://bigip1.example.com",
+            username="admin",
+            password_path="/fake/pw",
+            verify=False,
+        )
+        global_win = DeployWindow(start="08:00", end="18:00", days=[1, 2, 3, 4, 5])
+        with patch("app.targets.manager._build_target", _build_mock_target):
+            from app.targets.manager import DeployManager as DM
+
+            mgr = DM([cfg], default_window=global_win)
+        assert mgr._windows["f5-paris"] is global_win
+
+    def test_per_target_window_overrides_global(self):
+        """Target with explicit window ignores global default."""
+        cfg = F5TargetConfig(
+            name="f5-paris",
+            addr="https://bigip1.example.com",
+            username="admin",
+            password_path="/fake/pw",
+            verify=False,
+            deploy_window=DeployWindow(start="22:00", end="06:00"),
+        )
+        global_win = DeployWindow(start="08:00", end="18:00", days=[1, 2, 3, 4, 5])
+        with patch("app.targets.manager._build_target", _build_mock_target):
+            from app.targets.manager import DeployManager as DM
+
+            mgr = DM([cfg], default_window=global_win)
+        assert mgr._windows["f5-paris"] is cfg.deploy_window
+
+    def test_scheduler_shuts_down_on_close(self, manager):
+        manager.close()
+        assert not manager._scheduler.running

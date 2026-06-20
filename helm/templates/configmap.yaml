@@ -89,12 +89,12 @@ data:
       warn_days: {{ toYaml .Values.monitor.warnDays | nindent 6 }}
       {{- if .Values.monitor.alertWebhookUrl }}
       alert_webhook_url: {{ .Values.monitor.alertWebhookUrl | quote }}
+      {{- else }}
+      alert_webhook_url: null
+      {{- end }}
       {{- if .Values.monitor.alertWebhookHeaders }}
       alert_webhook_headers:
         {{- toYaml .Values.monitor.alertWebhookHeaders | nindent 4 }}
-      {{- end }}
-      {{- else }}
-      alert_webhook_url: null
       {{- end }}
       renew_command: |-
         {{- .Values.monitor.renewCommand | nindent 8 }}

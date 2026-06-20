@@ -60,6 +60,14 @@
 - Private methods should be prefixed with `_`.
 - Keep backward compatibility — new config fields must be optional with sensible defaults.
 
+## Language
+
+
+- Conversations in opencode may be held in any language.
+- All issues, pull requests, and their descriptions must be written in **English**.
+- Code comments, docstrings, and commit messages must also be in English.
+- Documentation is the only exception: `docs/fr/` contains the French translation of the English docs in `docs/`.
+
 ## Commit messages
 
 Use conventional commits:

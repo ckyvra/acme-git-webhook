@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 import httpx
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from app.config import MonitorConfig, OpensslConfig
+from app.config import MonitorConfig, OpensslConfig, is_within_window, next_window_start
 from app.vault_handler import VaultHandler
 
 logger = logging.getLogger(__name__)
@@ -94,6 +94,30 @@ class CertMonitor:
     def _run_renew(self, domain: str) -> None:
         if self.config is None or not self.config.renew_command:
             return  # lgtm[py/clear-text-logging-sensitive-data]
+
+        window = self.config.deploy_window
+        if window and self._scheduler is not None:
+            now = datetime.now(UTC)
+            if not is_within_window(window, now):
+                next_time = next_window_start(window, now)
+                logger.info(
+                    "CertMonitor: deferring renew for %s until %s (window %s-%s %s)",
+                    domain,
+                    next_time,
+                    window.start,
+                    window.end,
+                    window.timezone,
+                )
+                self._scheduler.add_job(
+                    self._run_renew,
+                    trigger="date",
+                    run_date=next_time,
+                    args=[domain],
+                    id=f"renew-{domain}",
+                    replace_existing=True,
+                )
+                return
+
         cmd = self.config.renew_command.replace("{domain}", domain)
         openssl = self._openssl
         if openssl:
