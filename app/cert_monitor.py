@@ -111,6 +111,17 @@ class CertMonitor:
                 cmd = cmd[:idx] + "***" + cmd[end:]
         return cmd
 
+    def _redact_domain(self, domain: str) -> str:
+        if not domain:
+            return "***"
+        labels = domain.split(".")
+        if len(labels) >= 2:
+            first = labels[0]
+            suffix = labels[-1]
+            first_redacted = (first[:1] + "***") if first else "***"
+            return f"{first_redacted}.{suffix}"
+        return domain[:1] + "***"
+
     def _run_renew(self, domain: str) -> None:
         if self.config is None or not self.config.renew_command:
             return
@@ -147,7 +158,7 @@ class CertMonitor:
             cmd = cmd.replace("{sig_hash}", openssl.signature_hash)
         now_ts = datetime.now(UTC).timestamp()
         logger.info(
-            "CertMonitor: renewing %s via %s", domain, self._sanitize_cmd(cmd)
+            "CertMonitor: renewing %s via %s", self._redact_domain(domain), self._sanitize_cmd(cmd)
         )
         try:
             result = subprocess.run(
