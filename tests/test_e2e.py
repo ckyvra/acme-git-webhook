@@ -60,7 +60,7 @@ class TestFullAcmeChallengeFlow:
         assert resp.status_code == 200, resp.text
         data = resp.json()
         assert data["status"] == "ok"
-        assert "example.com" in data["zone_file"]
+        assert data["zone_file"].count("example.com") >= 1  # zone content must include the test domain
 
         zone = _clone_zone(bare, tmp_path / "verify-auth")
         assert VALIDATION in zone
