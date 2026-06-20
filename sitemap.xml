@@ -1,171 +1,171 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/"/>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/api/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/api/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/api/"/>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/api/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/api/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/api/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/configuration/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/configuration/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/configuration/"/>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/configuration/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/configuration/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/configuration/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/deployment/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/deployment/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/deployment/"/>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/deployment/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/deployment/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/deployment/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/development/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/development/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/development/"/>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/development/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/development/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/development/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/globalsign/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/globalsign/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/globalsign/"/>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/globalsign/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/globalsign/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/globalsign/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/monitoring/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/monitoring/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/monitoring/"/>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/monitoring/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/monitoring/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/monitoring/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/quickstart/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/quickstart/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/quickstart/"/>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/quickstart/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/quickstart/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/quickstart/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/targets/custom/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/targets/custom/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/targets/custom/"/>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/targets/custom/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/targets/custom/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/targets/custom/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/targets/exchange/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/targets/exchange/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/targets/exchange/"/>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/targets/exchange/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/targets/exchange/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/targets/exchange/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/targets/f5/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/targets/f5/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/targets/f5/"/>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/targets/f5/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/targets/f5/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/targets/f5/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/targets/ivanti/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/targets/ivanti/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/targets/ivanti/"/>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/targets/ivanti/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/targets/ivanti/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/targets/ivanti/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/fr/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/fr/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/fr/api/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/fr/api/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/api/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/api/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/api/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/api/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/fr/configuration/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/fr/configuration/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/configuration/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/configuration/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/configuration/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/configuration/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/fr/deployment/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/fr/deployment/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/deployment/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/deployment/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/deployment/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/deployment/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/fr/development/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/fr/development/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/development/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/development/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/development/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/development/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/fr/globalsign/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/fr/globalsign/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/globalsign/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/globalsign/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/globalsign/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/globalsign/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/fr/monitoring/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/fr/monitoring/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/monitoring/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/monitoring/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/monitoring/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/monitoring/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/fr/quickstart/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/fr/quickstart/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/quickstart/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/quickstart/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/quickstart/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/quickstart/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/fr/targets/custom/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/fr/targets/custom/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/targets/custom/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/targets/custom/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/targets/custom/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/targets/custom/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/fr/targets/exchange/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/fr/targets/exchange/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/targets/exchange/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/targets/exchange/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/targets/exchange/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/targets/exchange/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/fr/targets/f5/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/fr/targets/f5/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/targets/f5/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/targets/f5/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/targets/f5/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/targets/f5/"/>
     </url>
     <url>
-        <loc>https://ckyvra.github.io/acme-git-webhook/fr/targets/ivanti/</loc>
+        <loc>https://ckyvra.github.io/cert-renew/fr/targets/ivanti/</loc>
         <lastmod>2026-06-20</lastmod>
         <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/acme-git-webhook/fr/targets/ivanti/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/acme-git-webhook/targets/ivanti/"/>
+        <xhtml:link rel="alternate" hreflang="fr" href="https://ckyvra.github.io/cert-renew/fr/targets/ivanti/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://ckyvra.github.io/cert-renew/targets/ivanti/"/>
     </url>
 </urlset>
