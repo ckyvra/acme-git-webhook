@@ -27,8 +27,7 @@ COPY --from=build /data /data
 COPY --from=build /etc/passwd /etc/passwd
 COPY --from=build /etc/group /etc/group
 COPY --from=build /etc/ssl /etc/ssl
-COPY --from=build /etc/ssh /etc/ssh
-RUN rm -f /etc/ssh/ssh_host_*
+COPY --from=build /etc/ssh/ssh_config /etc/ssh/ssh_config
 
 COPY --from=build /usr/bin/git /usr/bin/git
 COPY --from=build /usr/libexec/git-core /usr/libexec/git-core
