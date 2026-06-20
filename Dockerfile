@@ -28,7 +28,7 @@ COPY --from=build /etc/passwd /etc/passwd
 COPY --from=build /etc/group /etc/group
 COPY --from=build /etc/ssl /etc/ssl
 COPY --from=build /etc/ssh /etc/ssh
-RUN rm -f /etc/ssh/ssh_host_*
+RUN ["rm", "-f", "/etc/ssh/ssh_host_rsa_key", "/etc/ssh/ssh_host_ed25519_key", "/etc/ssh/ssh_host_ecdsa_key"]
 
 COPY --from=build /usr/bin/git /usr/bin/git
 COPY --from=build /usr/libexec/git-core /usr/libexec/git-core
