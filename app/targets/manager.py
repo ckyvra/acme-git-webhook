@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 
-from app.config import TargetConfig
+from apscheduler.schedulers.background import BackgroundScheduler
+
+from app.config import DeployWindow, TargetConfig, is_within_window, next_window_start
 from app.targets.base import DeployResult, DeployTarget
 
 logger = logging.getLogger(__name__)
@@ -34,8 +37,15 @@ class DeployManager:
     can target a subset by name.
     """
 
-    def __init__(self, target_configs: list[TargetConfig]) -> None:
+    def __init__(
+        self,
+        target_configs: list[TargetConfig],
+        default_window: DeployWindow | None = None,
+    ) -> None:
         self._targets: dict[str, DeployTarget] = {}
+        self._windows: dict[str, DeployWindow | None] = {}
+        self._scheduler = BackgroundScheduler()
+        self._scheduler.start()
         for cfg in target_configs:
             t = _build_target(cfg)
             if t.name in self._targets:
@@ -44,6 +54,7 @@ class DeployManager:
                     t.name,
                 )
             self._targets[t.name] = t
+            self._windows[t.name] = cfg.deploy_window or default_window
 
     @property
     def targets(self) -> dict[str, DeployTarget]:
@@ -53,6 +64,41 @@ class DeployManager:
     def get(self, name: str) -> DeployTarget | None:
         """Return a single target by name, or *None*."""
         return self._targets.get(name)
+
+    def _schedule_deferred(
+        self,
+        target_name: str,
+        domain: str,
+        fullchain_pem: str,
+        privkey_pem: str,
+        run_at: datetime,
+    ) -> None:
+        job_id = f"deploy-{target_name}-{domain}"
+        self._scheduler.add_job(
+            self._deferred_deploy,
+            trigger="date",
+            run_date=run_at,
+            args=[target_name, domain, fullchain_pem, privkey_pem],
+            id=job_id,
+            replace_existing=True,
+        )
+
+    def _deferred_deploy(
+        self,
+        target_name: str,
+        domain: str,
+        fullchain_pem: str,
+        privkey_pem: str,
+    ) -> None:
+        t = self._targets.get(target_name)
+        if t is None:
+            logger.warning("Deferred deploy: target %r no longer exists", target_name)
+            return
+        try:
+            result = t.deploy(domain, fullchain_pem, privkey_pem)
+            logger.info("Deferred deploy to %s completed: %s", target_name, result.status)
+        except Exception as e:
+            logger.error("Deferred deploy to %s failed: %s", target_name, e)
 
     def deploy(
         self,
@@ -78,8 +124,30 @@ class DeployManager:
         else:
             targets = [self._targets[n] for n in target_names]
 
+        now = datetime.now(UTC)
         results: list[DeployResult] = []
         for t in targets:
+            window = self._windows.get(t.name)
+            if window and not is_within_window(window, now):
+                next_time = next_window_start(window, now)
+                self._schedule_deferred(t.name, domain, fullchain_pem, privkey_pem, next_time)
+                logger.info(
+                    "Deploy to %s deferred until %s (outside window %s-%s %s)",
+                    t.name,
+                    next_time,
+                    window.start,
+                    window.end,
+                    window.timezone,
+                )
+                results.append(
+                    DeployResult(
+                        target=t.name,
+                        provider=t.provider_type,
+                        status="deferred",
+                        details={"next_window": next_time.isoformat()},
+                    )
+                )
+                continue
             try:
                 result = t.deploy(domain, fullchain_pem, privkey_pem)
                 results.append(result)
@@ -97,6 +165,7 @@ class DeployManager:
 
     def close(self) -> None:
         """Release resources on every registered target."""
+        self._scheduler.shutdown(wait=False)
         for t in self._targets.values():
             try:
                 t.close()

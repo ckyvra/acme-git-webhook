@@ -11,7 +11,7 @@ class DeployResult(BaseModel):
 
     target: str
     provider: str
-    status: Literal["ok", "error"]
+    status: Literal["ok", "error", "deferred"]
     details: dict = {}
     error: str | None = None
 

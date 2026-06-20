@@ -139,7 +139,8 @@ async def lifespan(app: FastAPI):
         vault_handler = VaultHandler(config.vault)
 
     if config.targets:
-        deploy_manager = DeployManager(config.targets)
+        default_window = config.monitor.deploy_window if config.monitor else None
+        deploy_manager = DeployManager(config.targets, default_window=default_window)
 
     if config.monitor:
         cert_monitor = CertMonitor(config.monitor, vault_handler, openssl=config.openssl)
@@ -349,6 +350,38 @@ def health():
     process is alive and accepting requests.
     """
     return {"status": "ok"}
+
+
+@app.get("/readyz")
+def readyz():
+    """Readiness probe endpoint.
+
+    Returns 200 only when the application is fully initialized:
+    config loaded, repository directory exists, Vault connected
+    (if configured). Returns 503 if dependencies are not ready.
+    """
+    checks: dict[str, str] = {}
+    status_code = 200
+
+    cfg = config
+    if cfg is not None:
+        git_dir = Path(cfg.webhook.work_dir) / "zone-repo"
+        if not git_dir.exists():
+            checks["git"] = "not cloned"
+            status_code = 503
+        if cfg.vault and not cfg.vault.skip and vault_handler is not None:
+            try:
+                vault_handler._ensure_authenticated()
+            except Exception:
+                checks["vault"] = "not connected"
+                status_code = 503
+    else:
+        checks["config"] = "not loaded"
+        status_code = 503
+
+    if status_code == 200:
+        checks["status"] = "ok"
+    return JSONResponse(content=checks, status_code=status_code)
 
 
 @app.post("/acme/auth")
