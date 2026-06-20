@@ -9,11 +9,13 @@ on:
     types: [submitted]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   auto-merge:
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || github.event_name == 'pull_request_target' || github.event_name == 'pull_request_review'
     steps:

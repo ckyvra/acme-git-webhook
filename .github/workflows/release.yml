@@ -1,5 +1,8 @@
 name: release
 
+permissions:
+  contents: read
+
 on:
   push:
     tags: ["v*"]
@@ -10,7 +13,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d1717cb1fcf5abd43f0a4794e64b1e5e63829bab # v6
         with:
           fetch-depth: 0
       - name: Extract release notes from CHANGELOG
@@ -26,7 +29,7 @@ jobs:
           ' CHANGELOG.md > release-notes.md
           echo "Release notes extracted for v${VERSION}:"
           cat release-notes.md
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           body_path: release-notes.md
           generate_release_notes: true
