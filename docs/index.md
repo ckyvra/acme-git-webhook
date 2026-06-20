@@ -1,5 +1,7 @@
 # acme-git-webhook
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ckyvra/acme-git-webhook/badge)](https://scorecard.dev/viewer/?uri=github.com/ckyvra/acme-git-webhook)
+
 FastAPI webhook that provisions ACME DNS-01 challenges via Git-managed Bind zone files, stores certificates in HashiCorp Vault, deploys them to network appliances (F5 Big-IP, Ivanti VPN, Exchange SMTP), and monitors expiration with optional auto-renewal.
 
 ## What problem does it solve?

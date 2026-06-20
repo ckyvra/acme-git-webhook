@@ -23,10 +23,12 @@ def read_password(path: str) -> str:
     """Read a plain-text password from a mounted file."""
     p = Path(path)
     if not p.exists():
-        raise RuntimeError(f"F5 password file not found: {path}")
+        logger.error("F5 password file not found: %s", path)
+        raise RuntimeError("F5 password file not found")
     pw = p.read_text().strip()
     if not pw:
-        raise RuntimeError(f"F5 password file is empty: {path}")
+        logger.error("F5 password file is empty: %s", path)
+        raise RuntimeError("F5 password file is empty")
     return pw
 
 

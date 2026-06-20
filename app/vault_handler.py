@@ -109,7 +109,8 @@ class VaultHandler:
         with open(path) as f:
             secret_id = f.read().strip()
         if not secret_id:
-            raise RuntimeError(f"SecretID file {path} is empty")
+            logger.error("SecretID file is empty: %s", path)
+            raise RuntimeError("SecretID file is empty")
         return secret_id
 
     def _authenticate(self) -> None:

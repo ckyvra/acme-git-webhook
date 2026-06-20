@@ -62,6 +62,7 @@
 
 ## Language
 
+
 - Conversations in opencode may be held in any language.
 - All issues, pull requests, and their descriptions must be written in **English**.
 - Code comments, docstrings, and commit messages must also be in English.
